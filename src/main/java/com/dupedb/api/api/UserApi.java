@@ -5,6 +5,7 @@ import com.dupedb.api.internal.HttpExecutor;
 import com.dupedb.api.model.Comment;
 import com.dupedb.api.model.ConnectedApp;
 import com.dupedb.api.model.Exploit;
+import com.dupedb.api.model.Sighting;
 import com.dupedb.api.model.User;
 import com.google.gson.reflect.TypeToken;
 
@@ -51,6 +52,12 @@ public class UserApi {
     public List<Comment> myComments() throws DupeDBException {
         Type type = new TypeToken<List<Comment>>() {}.getType();
         return http.get("/api/auth/my-comments", type);
+    }
+
+    /** Lists the current user's server sightings. Calls {@code GET /api/auth/my-sightings}. */
+    public List<Sighting> mySightings() throws DupeDBException {
+        Type type = new TypeToken<List<Sighting>>() {}.getType();
+        return http.get("/api/auth/my-sightings", type);
     }
 
     /** Deletes one of the current user's exploits. Calls {@code DELETE /api/auth/my-exploits/:id}. */

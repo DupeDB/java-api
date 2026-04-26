@@ -22,9 +22,14 @@ public class VoteApi {
 
     /**
      * Casts a vote on an exploit. Calls {@code POST /api/exploits/:id/vote}.
-     * @param type "up" or "down"
+     * @param type {@code "up"}, {@code "down"}, or {@code "none"} (the latter clears the existing vote)
      */
     public VoteResult vote(String exploitId, String type) throws DupeDBException {
-        return http.post("/api/exploits/" + exploitId + "/vote", Map.of("type", type), VoteResult.class);
+        return http.post("/api/exploits/" + exploitId + "/vote", Map.of("vote", type), VoteResult.class);
+    }
+
+    /** Clears the current user's vote on an exploit. Convenience for {@code vote(exploitId, "none")}. */
+    public VoteResult clear(String exploitId) throws DupeDBException {
+        return vote(exploitId, "none");
     }
 }

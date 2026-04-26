@@ -77,7 +77,12 @@ public class DupeDBClient implements AutoCloseable {
     /** Manage the authenticated user's profile, exploits, comments, and connected apps. */
     public UserApi user() { return userApi; }
 
-    /** Access site metadata: health, version, tags, stats, and server information. */
+    /**
+     * Access site metadata: health, version, tags, stats, and server information.
+     * Most methods (tags, versions, types, stats, server IPs, plugins, latest activity) now require
+     * authentication; only {@code health}, {@code version}, {@code publicStats},
+     * {@code publicStatsHistory}, {@code publicExploits}, and {@code siteVisibility} are public.
+     */
     public MetadataApi metadata() { return metadataApi; }
 
     /** Look up other users' public profiles by ID or username. */

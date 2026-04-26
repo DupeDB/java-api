@@ -37,55 +37,58 @@ public class MetadataApi {
         return http.get("/api/version", VersionInfo.class);
     }
 
-    /** Lists all tags with exploit counts. Calls {@code GET /api/tags}. */
+    /** Lists all tags with exploit counts. Calls {@code GET /api/tags}. Requires authentication. */
     public List<Tag> tags() throws DupeDBException {
         Type type = new TypeToken<List<Tag>>() {}.getType();
         return http.get("/api/tags", type);
     }
 
-    /** Lists Minecraft versions referenced by exploits. Calls {@code GET /api/versions}. */
+    /** Lists Minecraft versions referenced by exploits. Calls {@code GET /api/versions}. Requires authentication. */
     public List<String> versions() throws DupeDBException {
         record VersionsResponse(List<String> versions) {}
         VersionsResponse response = http.get("/api/versions", VersionsResponse.class);
         return response != null ? response.versions() : List.of();
     }
 
-    /** Lists exploit types. Calls {@code GET /api/types}. */
+    /** Lists exploit types. Calls {@code GET /api/types}. Requires authentication. */
     public List<String> types() throws DupeDBException {
         Type type = new TypeToken<List<String>>() {}.getType();
         return http.get("/api/types", type);
     }
 
-    /** @deprecated Returns empty array. Use server software fields on exploits instead. */
+    /**
+     * @deprecated Server returns empty array. Use server software fields on exploits instead.
+     * Requires authentication.
+     */
     @Deprecated
     public List<String> serverTypes() throws DupeDBException {
         Type type = new TypeToken<List<String>>() {}.getType();
         return http.get("/api/server-types", type);
     }
 
-    /** Gets site-wide statistics. Calls {@code GET /api/stats}. */
+    /** Gets site-wide statistics. Calls {@code GET /api/stats}. Requires authentication. */
     public SiteStats stats() throws DupeDBException {
         return http.get("/api/stats", SiteStats.class);
     }
 
-    /** Gets the most recent exploit activity, or null. Calls {@code GET /api/latest-activity}. */
+    /** Gets the most recent exploit activity, or null. Calls {@code GET /api/latest-activity}. Requires authentication. */
     public LatestActivity latestActivity() throws DupeDBException {
         record ActivityResponse(LatestActivity activity) {}
         ActivityResponse response = http.get("/api/latest-activity", ActivityResponse.class);
         return response != null ? response.activity() : null;
     }
 
-    /** Lists server IPs referenced by exploits. Calls {@code GET /api/server-ips}. */
+    /** Lists server IPs referenced by exploits and verified sightings. Calls {@code GET /api/server-ips}. Requires authentication. */
     public ServerIpResult serverIps(int page, int limit) throws DupeDBException {
         return http.get("/api/server-ips?page=" + page + "&limit=" + limit, ServerIpResult.class);
     }
 
-    /** Lists server IPs (first page, default limit of 50). */
+    /** Lists server IPs (first page, default limit of 50). Requires authentication. */
     public ServerIpResult serverIps() throws DupeDBException {
         return serverIps(1, 50);
     }
 
-    /** Lists plugins referenced by exploits. Calls {@code GET /api/plugins}. */
+    /** Lists plugins referenced by exploits. Calls {@code GET /api/plugins}. Requires authentication. */
     public List<Plugin> plugins() throws DupeDBException {
         Type type = new TypeToken<List<Plugin>>() {}.getType();
         return http.get("/api/plugins", type);

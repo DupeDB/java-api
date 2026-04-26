@@ -1,6 +1,17 @@
 .gradle/
 build/
+bin/
+out/
+*.class
+
 .idea/
+.vscode/
 *.iml
+.classpath
+.project
+.settings/
+
 .DS_Store
+Thumbs.db
+
 src/test/java/com/dupedb/api/OAuthManualTest.java

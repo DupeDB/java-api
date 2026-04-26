@@ -30,9 +30,14 @@ class ModelDeserializationTest {
                 "downvotes": 2,
                 "views": 150,
                 "date_submitted": "2026-01-01T00:00:00Z",
-                "date_verified": "2026-01-02T00:00:00Z",
+                "date_modified": "2026-01-02T00:00:00Z",
+                "published_at": "2026-01-01T00:01:00Z",
+                "last_activity_at": "2026-01-03T00:00:00Z",
+                "marked_working_at": "2026-01-02T00:00:00Z",
+                "marked_patched_at": null,
                 "edition": "java",
                 "platform": "vanilla",
+                "multiplayer_type": "version",
                 "minecraft_versions": ["1.21", "1.20.6"],
                 "server_ips": ["mc.example.com"],
                 "sources": ["https://example.com"],
@@ -43,17 +48,25 @@ class ModelDeserializationTest {
                 "embedded_videos": ["https://youtube.com/watch?v=test"],
                 "plugins": ["EssentialsX"],
                 "thumbnail": "/uploads/thumb.jpg",
+                "redirect_url": null,
+                "accent_color": "#ff5500",
+                "notify_discord": true,
+                "verified_player_count": 25,
+                "player_gate_qualifies": true,
+                "plugin_name": null,
+                "plugin_version": null,
                 "author": "TestUser",
                 "author_user_id": 42,
                 "author_display_name": "Test User",
+                "author_discord_id": "987654321",
+                "author_discord_avatar": "abcd1234",
+                "author_custom_avatar": null,
+                "author_role": "user",
                 "tags": ["dupe", "item"],
-                "is_plugin_specific": false,
-                "plugin_name": null,
-                "plugin_version": null,
-                "multiplayer_type": "multiplayer",
+                "sighted_ips": [],
+                "attachedMedia": [],
                 "is_draft": false,
                 "rejection_reason": null,
-                "accent_color": "#ff5500",
                 "verified_by": "AdminUser"
             }
             """;
@@ -69,9 +82,14 @@ class ModelDeserializationTest {
         assertEquals(2, exploit.downvotes());
         assertEquals(150, exploit.views());
         assertEquals("2026-01-01T00:00:00Z", exploit.dateSubmitted());
-        assertEquals("2026-01-02T00:00:00Z", exploit.dateVerified());
+        assertEquals("2026-01-02T00:00:00Z", exploit.dateModified());
+        assertEquals("2026-01-01T00:01:00Z", exploit.publishedAt());
+        assertEquals("2026-01-03T00:00:00Z", exploit.lastActivityAt());
+        assertEquals("2026-01-02T00:00:00Z", exploit.markedWorkingAt());
+        assertNull(exploit.markedPatchedAt());
         assertEquals("java", exploit.edition());
         assertEquals("vanilla", exploit.platform());
+        assertEquals("version", exploit.multiplayerType());
         assertEquals(List.of("1.21", "1.20.6"), exploit.minecraftVersions());
         assertEquals(List.of("mc.example.com"), exploit.serverIps());
         assertEquals(List.of("https://example.com"), exploit.sources());
@@ -82,18 +100,62 @@ class ModelDeserializationTest {
         assertEquals(List.of("https://youtube.com/watch?v=test"), exploit.embeddedVideos());
         assertEquals(List.of("EssentialsX"), exploit.plugins());
         assertEquals("/uploads/thumb.jpg", exploit.thumbnail());
+        assertNull(exploit.redirectUrl());
+        assertEquals("#ff5500", exploit.accentColor());
+        assertTrue(exploit.notifyDiscord());
+        assertEquals(25, exploit.verifiedPlayerCount());
+        assertTrue(exploit.playerGateQualifies());
+        assertNull(exploit.pluginName());
+        assertNull(exploit.pluginVersion());
         assertEquals("TestUser", exploit.author());
         assertEquals(42, exploit.authorUserId());
         assertEquals("Test User", exploit.authorDisplayName());
+        assertEquals("987654321", exploit.authorDiscordId());
+        assertEquals("abcd1234", exploit.authorDiscordAvatar());
+        assertNull(exploit.authorCustomAvatar());
+        assertEquals("user", exploit.authorRole());
         assertEquals(List.of("dupe", "item"), exploit.tags());
-        assertFalse(exploit.isPluginSpecific());
-        assertNull(exploit.pluginName());
-        assertNull(exploit.pluginVersion());
-        assertEquals("multiplayer", exploit.multiplayerType());
+        assertEquals(List.of(), exploit.sightedIps());
+        assertEquals(List.of(), exploit.attachedMedia());
         assertFalse(exploit.isDraft());
         assertNull(exploit.rejectionReason());
-        assertEquals("#ff5500", exploit.accentColor());
         assertEquals("AdminUser", exploit.verifiedBy());
+    }
+
+    @Test
+    void exploitDeserializesSightedIpsAndAttachedMedia() {
+        String json = """
+            {
+                "id": "xyz",
+                "name": "Sighted",
+                "sighted_ips": [
+                    {"ip": "play.example.net", "commentId": 12},
+                    {"ip": "mc.test.org", "commentId": 19}
+                ],
+                "attachedMedia": [
+                    {
+                        "filename": "abc.png",
+                        "original_name": "screenshot.png",
+                        "file_path": "/uploads/abc.png",
+                        "file_size": 245000,
+                        "mimetype": "image/png"
+                    }
+                ]
+            }
+            """;
+
+        Exploit exploit = JsonHelper.fromJson(json, Exploit.class);
+
+        assertEquals(2, exploit.sightedIps().size());
+        assertEquals("play.example.net", exploit.sightedIps().get(0).ip());
+        assertEquals(12, exploit.sightedIps().get(0).commentId());
+        assertEquals(1, exploit.attachedMedia().size());
+        AttachedMedia media = exploit.attachedMedia().getFirst();
+        assertEquals("abc.png", media.filename());
+        assertEquals("screenshot.png", media.originalName());
+        assertEquals("/uploads/abc.png", media.filePath());
+        assertEquals(245000L, media.fileSize());
+        assertEquals("image/png", media.mimetype());
     }
 
     // ---- ExploitCard ----
@@ -110,18 +172,30 @@ class ModelDeserializationTest {
                 "upvotes": 5,
                 "downvotes": 1,
                 "views": 30,
+                "view_count": 30,
                 "date_submitted": "2026-02-01T00:00:00Z",
+                "published_at": "2026-02-01T00:01:00Z",
+                "last_activity_at": "2026-02-03T00:00:00Z",
+                "marked_working_at": null,
+                "marked_patched_at": "2026-02-02T00:00:00Z",
                 "edition": "bedrock",
                 "platform": "modded",
+                "multiplayer_type": "plugin",
                 "minecraft_versions": ["1.20"],
+                "redirect_url": null,
+                "accent_color": "#00ff00",
+                "verified_player_count": null,
+                "player_gate_qualifies": null,
+                "plugin_name": "Essentials",
+                "plugin_version": "2.20",
                 "author": "CardUser",
                 "author_user_id": 7,
                 "author_display_name": "Card Display",
-                "tags": ["pvp"],
-                "is_plugin_specific": true,
-                "plugin_name": "Essentials",
-                "plugin_version": "2.20",
-                "accent_color": "#00ff00"
+                "author_discord_id": null,
+                "author_discord_avatar": null,
+                "author_custom_avatar": null,
+                "author_role": "user",
+                "tags": ["pvp"]
             }
             """;
 
@@ -135,7 +209,9 @@ class ModelDeserializationTest {
         assertEquals(5, card.upvotes());
         assertEquals(1, card.downvotes());
         assertEquals(30, card.views());
+        assertEquals(30, card.viewCount());
         assertEquals("2026-02-01T00:00:00Z", card.dateSubmitted());
+        assertEquals("plugin", card.multiplayerType());
         assertEquals("bedrock", card.edition());
         assertEquals("modded", card.platform());
         assertEquals(List.of("1.20"), card.minecraftVersions());
@@ -143,10 +219,11 @@ class ModelDeserializationTest {
         assertEquals(7, card.authorUserId());
         assertEquals("Card Display", card.authorDisplayName());
         assertEquals(List.of("pvp"), card.tags());
-        assertTrue(card.isPluginSpecific());
         assertEquals("Essentials", card.pluginName());
         assertEquals("2.20", card.pluginVersion());
         assertEquals("#00ff00", card.accentColor());
+        assertNull(card.verifiedPlayerCount());
+        assertNull(card.playerGateQualifies());
     }
 
     // ---- SearchResult<T> ----
@@ -197,7 +274,14 @@ class ModelDeserializationTest {
                 "discord_id": "123456789",
                 "discord_avatar": "abc",
                 "custom_avatar": null,
-                "author_role": "user"
+                "author_role": "user",
+                "parent_comment_id": null,
+                "is_sighting": 0,
+                "replies": [],
+                "sighting_id": null,
+                "sighting_server_ip": null,
+                "sighting_verified": null,
+                "sighting_patched": null
             }
             """;
 
@@ -214,41 +298,102 @@ class ModelDeserializationTest {
         assertEquals("abc", comment.discordAvatar());
         assertNull(comment.customAvatar());
         assertEquals("user", comment.authorRole());
+        assertNull(comment.parentCommentId());
+        assertEquals(0, comment.isSighting());
+        assertEquals(List.of(), comment.replies());
+        assertNull(comment.sightingId());
+    }
+
+    @Test
+    void commentDeserializesSightingFields() {
+        String json = """
+            {
+                "id": 200,
+                "exploit_id": "x",
+                "author": "u",
+                "author_user_id": 1,
+                "content": "saw it",
+                "date_posted": "2026-04-01T00:00:00Z",
+                "is_sighting": 1,
+                "sighting_id": 9,
+                "sighting_server_ip": "play.example.net",
+                "sighting_verified": 1,
+                "sighting_patched": 0
+            }
+            """;
+
+        Comment comment = JsonHelper.fromJson(json, Comment.class);
+        assertEquals(1, comment.isSighting());
+        assertEquals(9, comment.sightingId());
+        assertEquals("play.example.net", comment.sightingServerIp());
+        assertEquals(1, comment.sightingVerified());
+        assertEquals(0, comment.sightingPatched());
+    }
+
+    @Test
+    void commentDeserializesNestedReplies() {
+        String json = """
+            {
+                "id": 1,
+                "exploit_id": "e",
+                "author": "u1",
+                "author_user_id": 1,
+                "content": "top",
+                "date_posted": "2026-04-01T00:00:00Z",
+                "replies": [
+                    {
+                        "id": 2,
+                        "exploit_id": "e",
+                        "author": "u2",
+                        "author_user_id": 2,
+                        "content": "reply",
+                        "date_posted": "2026-04-01T00:01:00Z",
+                        "parent_comment_id": 1,
+                        "replies": []
+                    }
+                ]
+            }
+            """;
+
+        Comment comment = JsonHelper.fromJson(json, Comment.class);
+        assertEquals(1, comment.replies().size());
+        Comment reply = comment.replies().getFirst();
+        assertEquals(2, reply.id());
+        assertEquals(1, reply.parentCommentId());
+        assertEquals("reply", reply.content());
     }
 
     // ---- Vote ----
 
     @Test
-    void voteDeserializesFromCamelCaseJson() {
-        // Server sends camelCase for this endpoint: { userVote: 1 }
+    void voteDeserializesUpVote() {
         String json = """
-            {"userVote": 1}
+            {"userVote": "up"}
             """;
 
         Vote vote = JsonHelper.fromJson(json, Vote.class);
-        assertEquals(1, vote.userVote());
+        assertEquals("up", vote.userVote());
     }
 
     @Test
-    void voteDeserializesNoVote() {
+    void voteDeserializesNullUserVote() {
         String json = """
-            {"userVote": 0}
+            {"userVote": null}
             """;
 
         Vote vote = JsonHelper.fromJson(json, Vote.class);
-        assertEquals(0, vote.userVote());
+        assertNull(vote.userVote());
     }
 
     // ---- VoteResult ----
 
     @Test
     void voteResultDeserializesFromJson() {
-        // Server sends: { upvotes, downvotes, userVote } (camelCase for userVote)
         String json = """
             {
                 "upvotes": 15,
                 "downvotes": 3,
-                "userVote": -1
+                "userVote": "down"
             }
             """;
 
@@ -256,7 +401,23 @@ class ModelDeserializationTest {
 
         assertEquals(15, result.upvotes());
         assertEquals(3, result.downvotes());
-        assertEquals(-1, result.userVote());
+        assertEquals("down", result.userVote());
+    }
+
+    @Test
+    void voteResultWithNullUserVote() {
+        String json = """
+            {
+                "upvotes": 0,
+                "downvotes": 0,
+                "userVote": null
+            }
+            """;
+
+        VoteResult result = JsonHelper.fromJson(json, VoteResult.class);
+        assertEquals(0, result.upvotes());
+        assertEquals(0, result.downvotes());
+        assertNull(result.userVote());
     }
 
     // ---- User ----
@@ -305,18 +466,20 @@ class ModelDeserializationTest {
                 "status": "unverified",
                 "edition": "both",
                 "platform": "plugin",
+                "multiplayer_type": "plugin",
                 "minecraft_versions": ["1.21"],
                 "server_ips": [],
                 "sources": [],
                 "plugins": ["Factions"],
                 "plugin_name": "Factions",
                 "plugin_version": "3.0",
-                "is_plugin_specific": true,
-                "multiplayer_type": "multiplayer",
                 "server_software": ["spigot"],
                 "mod_links": [],
                 "embedded_videos": [],
                 "thumbnail": null,
+                "redirect_url": null,
+                "accent_color": null,
+                "notify_discord": null,
                 "tags": ["economy"],
                 "is_draft": true
             }
@@ -331,18 +494,20 @@ class ModelDeserializationTest {
         assertEquals("unverified", draft.status());
         assertEquals("both", draft.edition());
         assertEquals("plugin", draft.platform());
+        assertEquals("plugin", draft.multiplayerType());
         assertEquals(List.of("1.21"), draft.minecraftVersions());
         assertEquals(List.of(), draft.serverIps());
         assertEquals(List.of(), draft.sources());
         assertEquals(List.of("Factions"), draft.plugins());
         assertEquals("Factions", draft.pluginName());
         assertEquals("3.0", draft.pluginVersion());
-        assertTrue(draft.isPluginSpecific());
-        assertEquals("multiplayer", draft.multiplayerType());
         assertEquals(List.of("spigot"), draft.serverSoftware());
         assertEquals(List.of(), draft.modLinks());
         assertEquals(List.of(), draft.embeddedVideos());
         assertNull(draft.thumbnail());
+        assertNull(draft.redirectUrl());
+        assertNull(draft.accentColor());
+        assertNull(draft.notifyDiscord());
         assertEquals(List.of("economy"), draft.tags());
         assertTrue(draft.isDraft());
     }
@@ -372,8 +537,6 @@ class ModelDeserializationTest {
 
     @Test
     void connectedAppDeserializesFromCamelCaseServerJson() {
-        // Server sends camelCase from getUserConnectedApps (oauth.js):
-        // { id, appId, appName, readOnly, createdAt, lastUsedAt }
         String json = """
             {
                 "id": 42,
@@ -410,9 +573,9 @@ class ModelDeserializationTest {
                 "downvotes": 0,
                 "views": 0,
                 "date_submitted": null,
-                "date_verified": null,
                 "edition": null,
                 "platform": null,
+                "multiplayer_type": null,
                 "minecraft_versions": null,
                 "server_ips": null,
                 "sources": null,
@@ -427,10 +590,8 @@ class ModelDeserializationTest {
                 "author_user_id": null,
                 "author_display_name": null,
                 "tags": null,
-                "is_plugin_specific": false,
                 "plugin_name": null,
                 "plugin_version": null,
-                "multiplayer_type": null,
                 "is_draft": false,
                 "rejection_reason": null,
                 "accent_color": null,
@@ -444,7 +605,6 @@ class ModelDeserializationTest {
         assertEquals("Null Test", exploit.name());
         assertNull(exploit.description());
         assertNull(exploit.dateSubmitted());
-        assertNull(exploit.dateVerified());
         assertNull(exploit.minecraftVersions());
         assertNull(exploit.serverIps());
         assertNull(exploit.thumbnail());
@@ -454,6 +614,7 @@ class ModelDeserializationTest {
         assertNull(exploit.rejectionReason());
         assertNull(exploit.accentColor());
         assertNull(exploit.verifiedBy());
+        assertNull(exploit.multiplayerType());
     }
 
     @Test
@@ -943,21 +1104,5 @@ class ModelDeserializationTest {
         assertEquals(1, r.pagination().page());
         assertEquals(120, r.pagination().total());
         assertTrue(r.pagination().hasMore());
-    }
-
-    @Test
-    void voteResultWithNullUserVote() {
-        String json = """
-            {
-                "upvotes": 0,
-                "downvotes": 0,
-                "userVote": null
-            }
-            """;
-
-        VoteResult result = JsonHelper.fromJson(json, VoteResult.class);
-        assertEquals(0, result.upvotes());
-        assertEquals(0, result.downvotes());
-        assertNull(result.userVote());
     }
 }

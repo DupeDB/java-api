@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.Aurickk:dupedb-api:1.0.0")
+    implementation("com.github.Aurickk:dupedb-api:1.0.1")
 }
 ```
 
@@ -40,7 +40,7 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.Aurickk:dupedb-api:1.0.0'
+    implementation 'com.github.Aurickk:dupedb-api:1.0.1'
 }
 ```
 
@@ -55,7 +55,7 @@ To use authenticated endpoints, you need a registered OAuth app. Open a ticket i
 | **Redirect URIs** | Callback URLs (exact match, one per environment) | `http://localhost:9876/callback` |
 | **Read-Only** | Whether the app only needs read access | `false` |
 
-The app ID cannot be changed after creation. See the full [Developer Documentation](https://dupedb.net/developers) for details on the OAuth flow, permissions, and token handling.
+The app ID cannot be changed after creation. See the full [Developer Documentation](https://dupedb.net/resource/developer-documentation) for details on the OAuth flow, permissions, and token handling.
 
 ## Usage
 
@@ -63,7 +63,8 @@ The app ID cannot be changed after creation. See the full [Developer Documentati
 ```java
 DupeDBClient client = DupeDB.client().build();
 
-Exploit exploit = client.exploits().getById("abc12345678");
+PublicStats stats = client.metadata().publicStats();
+ExploitMeta meta = client.exploits().getMeta("abc12345678");
 ```
 
 ### Authenticated with token (headless servers)
@@ -90,9 +91,9 @@ User me = client.user().me();
 
 | Context | Auth Mode | Why |
 |---------|-----------|-----|
-| Fabric/Forge client mod | OAuth | Player is at their desktop -- browser flow works naturally. Token is saved so the player only authenticates once. |
-| Paper/Spigot server plugin | Token | Servers run headless -- no browser available. Generate a token on dupedb.net and pass it in config. |
-| Read-only / public data | None | Public endpoints (metadata, public stats, exploit lookup by slug) need no auth. |
+| Fabric/Forge client mod | OAuth | Player is at their desktop so browser flow works naturally. Token is saved so the player only authenticates once. |
+| Paper/Spigot server plugin | Token | Servers run headless with no browser available. Generate a token on dupedb.net and pass it in config. |
+| Read-only / public data | None | A handful of endpoints (health, version, public stats, exploit meta, site visibility) need no auth. Most metadata and detail lookups now require a token. |
 
 ### Threading
 
@@ -135,9 +136,11 @@ try {
 |--------|----------|------|
 | `exploits().search(query, page)` | GET /api/exploits/search | Yes |
 | `exploits().search(query, page, filters)` | GET /api/exploits/search | Yes |
-| `exploits().getById(id)` | GET /api/exploits/slug/:id | No |
-| `exploits().getByIdAuth(id)` | GET /api/exploits/:id | Yes |
+| `exploits().search(query, page, SearchFilters)` | GET /api/exploits/search | Yes |
+| `exploits().getById(id)` | GET /api/exploits/:id | Yes |
+| `exploits().getMeta(id)` | GET /api/exploits/:id/meta | No |
 | `exploits().update(id, data)` | PUT /api/exploits/:id | Yes |
+| `exploits().report(id, type, message)` | POST /api/exploits/:id/report | Yes |
 
 ### Votes
 
@@ -145,6 +148,7 @@ try {
 |--------|----------|------|
 | `votes().get(exploitId)` | GET /api/exploits/:id/vote | Yes |
 | `votes().vote(exploitId, type)` | POST /api/exploits/:id/vote | Yes |
+| `votes().clear(exploitId)` | POST /api/exploits/:id/vote | Yes |
 
 ### Comments
 
@@ -152,6 +156,7 @@ try {
 |--------|----------|------|
 | `comments().list(exploitId)` | GET /api/exploits/:id/comments | Yes |
 | `comments().add(exploitId, content)` | POST /api/exploits/:id/comments | Yes |
+| `comments().add(exploitId, content, parentId, isSighting, serverIp)` | POST /api/exploits/:id/comments | Yes |
 
 ### Drafts
 
@@ -172,6 +177,7 @@ try {
 | `user().updatePrivacy(hide)` | PUT /api/auth/privacy-settings | Yes |
 | `user().myExploits()` | GET /api/auth/my-exploits | Yes |
 | `user().myComments()` | GET /api/auth/my-comments | Yes |
+| `user().mySightings()` | GET /api/auth/my-sightings | Yes |
 | `user().deleteExploit(id)` | DELETE /api/auth/my-exploits/:id | Yes |
 | `user().connectedApps()` | GET /api/oauth/connected | Yes |
 | `user().revokeApp(appId)` | DELETE /api/oauth/connected/:appId | Yes |
@@ -181,8 +187,8 @@ try {
 
 | Method | Endpoint | Auth |
 |--------|----------|------|
-| `users().getProfile(userId)` | GET /api/users/:id/profile | No |
-| `users().lookup(name)` | GET /api/users/lookup/:name | No |
+| `users().getProfile(userId)` | GET /api/users/:id/profile | Yes |
+| `users().lookup(name)` | GET /api/users/lookup/:name | Yes |
 
 ### Communities
 
@@ -218,13 +224,13 @@ try {
 |--------|----------|------|
 | `metadata().health()` | GET /api/health | No |
 | `metadata().version()` | GET /api/version | No |
-| `metadata().tags()` | GET /api/tags | No |
-| `metadata().versions()` | GET /api/versions | No |
-| `metadata().types()` | GET /api/types | No |
-| `metadata().stats()` | GET /api/stats | No |
-| `metadata().latestActivity()` | GET /api/latest-activity | No |
-| `metadata().serverIps(page, limit)` | GET /api/server-ips | No |
-| `metadata().plugins()` | GET /api/plugins | No |
+| `metadata().tags()` | GET /api/tags | Yes |
+| `metadata().versions()` | GET /api/versions | Yes |
+| `metadata().types()` | GET /api/types | Yes |
+| `metadata().stats()` | GET /api/stats | Yes |
+| `metadata().latestActivity()` | GET /api/latest-activity | Yes |
+| `metadata().serverIps(page, limit)` | GET /api/server-ips | Yes |
+| `metadata().plugins()` | GET /api/plugins | Yes |
 | `metadata().publicStats()` | GET /api/public/stats | No |
 | `metadata().publicStatsHistory(days)` | GET /api/public/stats/history | No |
 | `metadata().siteVisibility()` | GET /api/site-visibility | No |
@@ -239,4 +245,6 @@ try {
 | Detail | 15 / min |
 | Voting | 60 / min |
 | Comments | 10 / min |
+| Reports | 5 / min |
 | Draft submit | 20 / hour |
+| Draft auto-save | 30 / min |

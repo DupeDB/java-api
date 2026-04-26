@@ -105,6 +105,18 @@ class UserApiTest {
         assertEquals("/api/auth/my-comments", call.path());
     }
 
+    // --- mySightings ---
+
+    @Test
+    void mySightings_delegatesToGetWithCorrectPath() throws DupeDBException {
+        api.mySightings();
+
+        assertEquals(1, recorder.getCalls().size());
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("GET_TYPE", call.method());
+        assertEquals("/api/auth/my-sightings", call.path());
+    }
+
     // --- deleteExploit ---
 
     @Test

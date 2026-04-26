@@ -45,11 +45,36 @@ class VoteApiTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void vote_passesTypeInBody() throws DupeDBException {
+    void vote_passesVoteInBody() throws DupeDBException {
         api.vote("exploit-123", "down");
 
         RecordingExecutor.Call call = recorder.getCalls().getFirst();
         Map<String, Object> body = (Map<String, Object>) call.body();
-        assertEquals("down", body.get("type"));
+        assertEquals("down", body.get("vote"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void vote_acceptsNone() throws DupeDBException {
+        api.vote("exploit-123", "none");
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertEquals("none", body.get("vote"));
+    }
+
+    // --- clear ---
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void clear_postsNoneToVoteEndpoint() throws DupeDBException {
+        api.clear("exploit-123");
+
+        assertEquals(1, recorder.getCalls().size());
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("POST", call.method());
+        assertEquals("/api/exploits/exploit-123/vote", call.path());
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertEquals("none", body.get("vote"));
     }
 }

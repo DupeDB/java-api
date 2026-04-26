@@ -17,14 +17,22 @@ import java.lang.reflect.Type;
 public final class JsonHelper {
     private static final Gson GSON = new GsonBuilder()
         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-        .registerTypeAdapter(boolean.class, new LenientBooleanAdapter())
-        .registerTypeAdapter(Boolean.class, new LenientBooleanAdapter())
+        .registerTypeAdapter(boolean.class, new LenientBooleanAdapter(false))
+        .registerTypeAdapter(Boolean.class, new LenientBooleanAdapter(null))
         .create();
 
     /**
      * Handles boolean fields that may arrive as 0/1 numbers from the database.
+     * For JSON null, returns the configured default — primitive {@code boolean}
+     * coerces to {@code false}, boxed {@code Boolean} preserves {@code null}.
      */
     private static class LenientBooleanAdapter extends TypeAdapter<Boolean> {
+        private final Boolean nullDefault;
+
+        LenientBooleanAdapter(Boolean nullDefault) {
+            this.nullDefault = nullDefault;
+        }
+
         @Override
         public void write(JsonWriter out, Boolean value) throws IOException {
             out.value(value);
@@ -37,7 +45,7 @@ public final class JsonHelper {
             }
             if (in.peek() == JsonToken.NULL) {
                 in.nextNull();
-                return false;
+                return nullDefault;
             }
             return in.nextBoolean();
         }
