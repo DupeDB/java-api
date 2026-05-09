@@ -123,6 +123,40 @@ class ModelDeserializationTest {
     }
 
     @Test
+    void exploitDeserializesEmbeddedComments() {
+        String json = """
+            {
+                "id": "abc",
+                "name": "With Comments",
+                "comments": [
+                    {
+                        "id": 1,
+                        "exploit_id": "abc",
+                        "author": "u1",
+                        "author_user_id": 10,
+                        "content": "looks legit",
+                        "date_posted": "2026-04-01T00:00:00Z"
+                    },
+                    {
+                        "id": 2,
+                        "exploit_id": "abc",
+                        "author": "u2",
+                        "author_user_id": 11,
+                        "content": "confirmed",
+                        "date_posted": "2026-04-01T00:01:00Z",
+                        "edited_at": "2026-04-02T10:00:00Z"
+                    }
+                ]
+            }
+            """;
+
+        Exploit exploit = JsonHelper.fromJson(json, Exploit.class);
+        assertEquals(2, exploit.comments().size());
+        assertEquals("looks legit", exploit.comments().get(0).content());
+        assertEquals("2026-04-02T10:00:00Z", exploit.comments().get(1).editedAt());
+    }
+
+    @Test
     void exploitDeserializesSightedIpsAndAttachedMedia() {
         String json = """
             {
@@ -209,7 +243,6 @@ class ModelDeserializationTest {
         assertEquals(5, card.upvotes());
         assertEquals(1, card.downvotes());
         assertEquals(30, card.views());
-        assertEquals(30, card.viewCount());
         assertEquals("2026-02-01T00:00:00Z", card.dateSubmitted());
         assertEquals("plugin", card.multiplayerType());
         assertEquals("bedrock", card.edition());
@@ -224,6 +257,23 @@ class ModelDeserializationTest {
         assertEquals("#00ff00", card.accentColor());
         assertNull(card.verifiedPlayerCount());
         assertNull(card.playerGateQualifies());
+    }
+
+    @Test
+    void exploitCardDeserializesViewCountAlternate() {
+        // /api/public/exploits emits the count as `view_count` (SQL aliases
+        // `e.views as view_count`); the alternate-name mapping should still
+        // populate the `views` accessor.
+        String json = """
+            {
+                "id": "card-vc",
+                "name": "Public Card",
+                "view_count": 12
+            }
+            """;
+
+        ExploitCard card = JsonHelper.fromJson(json, ExploitCard.class);
+        assertEquals(12, card.views());
     }
 
     // ---- SearchResult<T> ----
@@ -270,6 +320,7 @@ class ModelDeserializationTest {
                 "author_user_id": 5,
                 "content": "Great find!",
                 "date_posted": "2026-03-01T12:00:00Z",
+                "edited_at": null,
                 "author_display_name": "Commenter One",
                 "discord_id": "123456789",
                 "discord_avatar": "abc",
@@ -293,6 +344,7 @@ class ModelDeserializationTest {
         assertEquals(5, comment.authorUserId());
         assertEquals("Great find!", comment.content());
         assertEquals("2026-03-01T12:00:00Z", comment.datePosted());
+        assertNull(comment.editedAt());
         assertEquals("Commenter One", comment.authorDisplayName());
         assertEquals("123456789", comment.discordId());
         assertEquals("abc", comment.discordAvatar());
@@ -328,6 +380,24 @@ class ModelDeserializationTest {
         assertEquals("play.example.net", comment.sightingServerIp());
         assertEquals(1, comment.sightingVerified());
         assertEquals(0, comment.sightingPatched());
+    }
+
+    @Test
+    void commentDeserializesEditedAtTimestamp() {
+        String json = """
+            {
+                "id": 5,
+                "exploit_id": "e",
+                "author": "u",
+                "author_user_id": 1,
+                "content": "edited",
+                "date_posted": "2026-04-01T00:00:00Z",
+                "edited_at": "2026-04-20T10:30:00.000Z"
+            }
+            """;
+
+        Comment comment = JsonHelper.fromJson(json, Comment.class);
+        assertEquals("2026-04-20T10:30:00.000Z", comment.editedAt());
     }
 
     @Test
@@ -537,9 +607,11 @@ class ModelDeserializationTest {
 
     @Test
     void connectedAppDeserializesFromCamelCaseServerJson() {
+        // ConnectedApp.id is the refresh-token family UUID per Phase 103 cutover
+        // (commit a9f52bb) — String, not int.
         String json = """
             {
-                "id": 42,
+                "id": "fam-42",
                 "appId": "my-app",
                 "appName": "My Cool App",
                 "readOnly": true,
@@ -550,7 +622,7 @@ class ModelDeserializationTest {
 
         ConnectedApp app = JsonHelper.fromJson(json, ConnectedApp.class);
 
-        assertEquals(42, app.id());
+        assertEquals("fam-42", app.id());
         assertEquals("my-app", app.appId());
         assertEquals("My Cool App", app.appName());
         assertTrue(app.readOnly());
@@ -732,6 +804,7 @@ class ModelDeserializationTest {
                 "created_at": "2025-01-01T00:00:00Z",
                 "exploit_count": 15,
                 "total_upvotes": 200,
+                "total_views": 1234,
                 "discord_id": "123456",
                 "discord_avatar": "abc",
                 "is_banned": false,
@@ -750,6 +823,7 @@ class ModelDeserializationTest {
         assertEquals("2025-01-01T00:00:00Z", profile.createdAt());
         assertEquals(15, profile.exploitCount());
         assertEquals(200, profile.totalUpvotes());
+        assertEquals(1234, profile.totalViews());
         assertEquals("123456", profile.discordId());
         assertEquals("abc", profile.discordAvatar());
         assertFalse(profile.isBanned());
@@ -1026,7 +1100,8 @@ class ModelDeserializationTest {
                 "commitCount": 542,
                 "lastCommitMessage": "fix: update auth flow",
                 "lastCommitDate": "2026-04-01",
-                "authorName": "developer"
+                "authorName": "developer",
+                "githubUsername": "developer-gh"
             }
             """;
 
@@ -1035,6 +1110,7 @@ class ModelDeserializationTest {
         assertEquals("fix: update auth flow", info.lastCommitMessage());
         assertEquals("2026-04-01", info.lastCommitDate());
         assertEquals("developer", info.authorName());
+        assertEquals("developer-gh", info.githubUsername());
     }
 
     // ---- CommunityDetection ----

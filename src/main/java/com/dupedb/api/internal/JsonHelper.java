@@ -9,6 +9,7 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.time.Instant;
 
 /**
  * Internal JSON serialization helper using Gson with snake_case naming policy.
@@ -19,6 +20,7 @@ public final class JsonHelper {
         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
         .registerTypeAdapter(boolean.class, new LenientBooleanAdapter(false))
         .registerTypeAdapter(Boolean.class, new LenientBooleanAdapter(null))
+        .registerTypeAdapter(Instant.class, new InstantTypeAdapter())
         .create();
 
     /**
@@ -48,6 +50,32 @@ public final class JsonHelper {
                 return nullDefault;
             }
             return in.nextBoolean();
+        }
+    }
+
+    /**
+     * Serializes {@link Instant} as an ISO-8601 string and deserializes the same.
+     * Required because Gson's reflective default fails on JDK 25 (the
+     * {@code java.base} module does not {@code opens java.time} to the unnamed
+     * module). Used by Phase 103 D-16 {@code Credentials.expiresAt}.
+     */
+    private static class InstantTypeAdapter extends TypeAdapter<Instant> {
+        @Override
+        public void write(JsonWriter out, Instant value) throws IOException {
+            if (value == null) {
+                out.nullValue();
+                return;
+            }
+            out.value(value.toString());
+        }
+
+        @Override
+        public Instant read(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
+                in.nextNull();
+                return null;
+            }
+            return Instant.parse(in.nextString());
         }
     }
 

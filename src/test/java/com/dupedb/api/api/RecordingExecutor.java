@@ -17,7 +17,8 @@ class RecordingExecutor extends HttpExecutor {
     /**
      * A recorded method call with its path and body.
      *
-     * @param method the HTTP method used (GET_CLASS, GET_TYPE, POST, PUT, DELETE)
+     * @param method the HTTP method used (GET_CLASS, GET_TYPE, POST, PUT, PATCH,
+     *               POST_FORM, DELETE, DELETE_RESPONSE, POST_MULTIPART)
      * @param path   the API path requested
      * @param body   the request body (null for GET/DELETE)
      */
@@ -57,6 +58,18 @@ class RecordingExecutor extends HttpExecutor {
     @Override
     public <T> T put(String path, Object body, Class<T> type) {
         calls.add(new Call("PUT", path, body));
+        return null;
+    }
+
+    @Override
+    public <T> T patch(String path, Object body, Class<T> type) {
+        calls.add(new Call("PATCH", path, body));
+        return null;
+    }
+
+    @Override
+    public <T> T postForm(String path, Map<String, String> formData, Class<T> type) {
+        calls.add(new Call("POST_FORM", path, formData));
         return null;
     }
 

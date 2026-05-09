@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.Aurickk:dupedb-api:1.0.1")
+    implementation("com.github.Aurickk:dupedb-api:1.0.2")
 }
 ```
 
@@ -40,7 +40,7 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.Aurickk:dupedb-api:1.0.1'
+    implementation 'com.github.Aurickk:dupedb-api:1.0.2'
 }
 ```
 
@@ -157,6 +157,18 @@ try {
 | `comments().list(exploitId)` | GET /api/exploits/:id/comments | Yes |
 | `comments().add(exploitId, content)` | POST /api/exploits/:id/comments | Yes |
 | `comments().add(exploitId, content, parentId, isSighting, serverIp)` | POST /api/exploits/:id/comments | Yes |
+| `comments().edit(commentId, content)` | PUT /api/auth/my-comments/:id | Yes |
+| `comments().deleteOwn(commentId)` | DELETE /api/auth/my-comments/:id | Yes |
+
+### Sightings
+
+Cross-exploit community sighting browse. For your own sightings see `user().mySightings()`.
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `sightings().search(query, page)` | GET /api/sightings/search | Yes |
+| `sightings().search(query, page, filters)` | GET /api/sightings/search | Yes |
+| `sightings().autocomplete(prefix)` | GET /api/sightings/search?autocomplete=1 | Yes |
 
 ### Drafts
 
@@ -189,6 +201,25 @@ try {
 |--------|----------|------|
 | `users().getProfile(userId)` | GET /api/users/:id/profile | Yes |
 | `users().lookup(name)` | GET /api/users/lookup/:name | Yes |
+| `users().getProfileByDiscordId(discordId)` | GET /api/users/discord/:discordId/profile | Yes |
+| `users().getContributionsByDiscordId(discordId, limit, offset)` | GET /api/users/discord/:discordId/contributions | Yes |
+| `users().discordPoints()` | GET /api/users/discord-points | Yes |
+| `users().search(query)` | GET /api/users/search | Yes |
+
+### My Apps (OAuth Self-Service)
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `myApps().list()` | GET /api/oauth/my-apps | Yes |
+| `myApps().create(id, name, redirectUris, readOnly)` | POST /api/oauth/my-apps | Yes |
+| `myApps().update(id, name, redirectUris, readOnly)` | PATCH /api/oauth/my-apps/:id | Yes |
+| `myApps().delete(id)` | DELETE /api/oauth/my-apps/:id | Yes |
+
+### OAuth
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `oauth().revoke(token, tokenTypeHint)` | POST /api/oauth/revoke | No |
 
 ### Communities
 
@@ -231,10 +262,19 @@ try {
 | `metadata().latestActivity()` | GET /api/latest-activity | Yes |
 | `metadata().serverIps(page, limit)` | GET /api/server-ips | Yes |
 | `metadata().plugins()` | GET /api/plugins | Yes |
+| `metadata().newPublished(since)` | GET /api/new-published | Yes |
+| `metadata().newUnverified(since)` | GET /api/new-unverified | Yes |
+| `metadata().exploitCardBatch(ids)` | GET /api/exploits-card-batch | Yes |
+| `metadata().newUnverifiedSightings(since)` | GET /api/new-unverified-sightings | Yes |
+| `metadata().newVerifiedSightings(since)` | GET /api/new-verified-sightings | Yes |
+| `metadata().newReports(since)` | GET /api/new-reports | Yes |
+| `metadata().newAuditLogs(since)` | GET /api/new-audit-logs | Yes |
 | `metadata().publicStats()` | GET /api/public/stats | No |
 | `metadata().publicStatsHistory(days)` | GET /api/public/stats/history | No |
 | `metadata().siteVisibility()` | GET /api/site-visibility | No |
 | `metadata().publicExploits()` | GET /api/public/exploits | No |
+
+> `metadata().serverTypes()` is `@Deprecated` — the server returns an empty array. Read `Exploit.serverSoftware()` (per-exploit) instead.
 
 ## Rate Limits
 

@@ -189,6 +189,9 @@ class DupeDBClientTest {
         assertSame(client.communities(), client.communities());
         assertSame(client.media(), client.media());
         assertSame(client.resources(), client.resources());
+        assertSame(client.myApps(), client.myApps());
+        assertSame(client.oauth(), client.oauth());
+        assertSame(client.sightings(), client.sightings());
     }
 
     @Test
@@ -199,6 +202,36 @@ class DupeDBClientTest {
         ResourceApi resources = client.resources();
         assertNotNull(resources);
         assertInstanceOf(ResourceApi.class, resources);
+    }
+
+    @Test
+    void client_myApps_returnsMyAppsApiInstance() {
+        DupeDBClient client = DupeDB.client()
+            .baseUrl("https://test.dupedb.net")
+            .build();
+        MyAppsApi myApps = client.myApps();
+        assertNotNull(myApps);
+        assertInstanceOf(MyAppsApi.class, myApps);
+    }
+
+    @Test
+    void client_oauth_returnsOAuthApiInstance() {
+        DupeDBClient client = DupeDB.client()
+            .baseUrl("https://test.dupedb.net")
+            .build();
+        OAuthApi oauth = client.oauth();
+        assertNotNull(oauth);
+        assertInstanceOf(OAuthApi.class, oauth);
+    }
+
+    @Test
+    void client_sightings_returnsSightingApiInstance() {
+        DupeDBClient client = DupeDB.client()
+            .baseUrl("https://test.dupedb.net")
+            .build();
+        SightingApi sightings = client.sightings();
+        assertNotNull(sightings);
+        assertInstanceOf(SightingApi.class, sightings);
     }
 
     @Test

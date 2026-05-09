@@ -85,4 +85,39 @@ class CommentApiTest {
         assertThrows(IllegalArgumentException.class,
             () -> api.add("exploit-123", "x", null, true, "   "));
     }
+
+    // --- edit ---
+
+    @Test
+    void edit_putsToCorrectPath() throws DupeDBException {
+        api.edit(42, "updated text");
+
+        assertEquals(1, recorder.getCalls().size());
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("PUT", call.method());
+        assertEquals("/api/auth/my-comments/42", call.path());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void edit_sendsContentBody() throws DupeDBException {
+        api.edit(42, "updated text");
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertEquals("updated text", body.get("content"));
+        assertEquals(1, body.size());
+    }
+
+    // --- deleteOwn ---
+
+    @Test
+    void deleteOwn_deletesAtCorrectPath() throws DupeDBException {
+        api.deleteOwn(99);
+
+        assertEquals(1, recorder.getCalls().size());
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("DELETE", call.method());
+        assertEquals("/api/auth/my-comments/99", call.path());
+    }
 }

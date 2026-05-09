@@ -32,25 +32,25 @@ class HttpExecutorTest {
     // --- Token supplier tests ---
 
     @Test
-    void get_withNullTokenSupplier_doesNotAddXAppTokenHeader() {
+    void get_withNullTokenSupplier_doesNotAddAuthorizationHeader() {
         HttpExecutor exec = new HttpExecutor("https://dupedb.net", null);
         Map<String, String> headers = exec.buildHeaders(null);
-        assertFalse(headers.containsKey("X-App-Token"));
+        assertFalse(headers.containsKey("Authorization"));
         assertEquals("application/json", headers.get("Accept"));
     }
 
     @Test
-    void get_withTokenSupplier_addsXAppTokenHeader() {
+    void get_withTokenSupplier_addsAuthorizationBearerHeader() {
         HttpExecutor exec = new HttpExecutor("https://dupedb.net", () -> "dupe_abc123");
         Map<String, String> headers = exec.buildHeaders(null);
-        assertEquals("dupe_abc123", headers.get("X-App-Token"));
+        assertEquals("Bearer dupe_abc123", headers.get("Authorization"));
     }
 
     @Test
-    void get_withTokenSupplierReturningNull_doesNotAddXAppTokenHeader() {
+    void get_withTokenSupplierReturningNull_doesNotAddAuthorizationHeader() {
         HttpExecutor exec = new HttpExecutor("https://dupedb.net", () -> null);
         Map<String, String> headers = exec.buildHeaders(null);
-        assertFalse(headers.containsKey("X-App-Token"));
+        assertFalse(headers.containsKey("Authorization"));
     }
 
     @Test
@@ -59,11 +59,11 @@ class HttpExecutorTest {
         HttpExecutor exec = new HttpExecutor("https://dupedb.net", token::get);
 
         Map<String, String> headers1 = exec.buildHeaders(null);
-        assertEquals("first_token", headers1.get("X-App-Token"));
+        assertEquals("Bearer first_token", headers1.get("Authorization"));
 
         token.set("second_token");
         Map<String, String> headers2 = exec.buildHeaders(null);
-        assertEquals("second_token", headers2.get("X-App-Token"));
+        assertEquals("Bearer second_token", headers2.get("Authorization"));
     }
 
     @Test
@@ -72,7 +72,7 @@ class HttpExecutorTest {
         Map<String, String> headers = exec.buildHeaders("application/json");
         assertEquals("application/json", headers.get("Content-Type"));
         assertEquals("application/json", headers.get("Accept"));
-        assertEquals("tok", headers.get("X-App-Token"));
+        assertEquals("Bearer tok", headers.get("Authorization"));
     }
 
     // --- Response mapping tests (status code -> exception) ---
@@ -207,6 +207,38 @@ class HttpExecutorTest {
         // Some APIs return 200 for delete with empty body
         Object result = executor.mapResponse(200, "", emptyHeaders(), Void.class);
         assertNull(result);
+    }
+
+    // --- encodeForm tests (form-urlencoded body builder) ---
+
+    @Test
+    void encodeForm_basicRoundTrip() {
+        java.util.LinkedHashMap<String, String> form = new java.util.LinkedHashMap<>();
+        form.put("token", "abc");
+        form.put("token_type_hint", "refresh_token");
+        assertEquals("token=abc&token_type_hint=refresh_token", HttpExecutor.encodeForm(form));
+    }
+
+    @Test
+    void encodeForm_skipsNullValues() {
+        java.util.LinkedHashMap<String, String> form = new java.util.LinkedHashMap<>();
+        form.put("token", "abc");
+        form.put("token_type_hint", null);
+        assertEquals("token=abc", HttpExecutor.encodeForm(form));
+    }
+
+    @Test
+    void encodeForm_emptyMapReturnsEmptyString() {
+        assertEquals("", HttpExecutor.encodeForm(Map.of()));
+    }
+
+    @Test
+    void encodeForm_escapesSpecialCharacters() {
+        // URLEncoder spaces → '+', '=' → '%3D'
+        java.util.LinkedHashMap<String, String> form = new java.util.LinkedHashMap<>();
+        form.put("q", "hello world");
+        form.put("eq", "a=b");
+        assertEquals("q=hello+world&eq=a%3Db", HttpExecutor.encodeForm(form));
     }
 
     // --- Helper methods ---

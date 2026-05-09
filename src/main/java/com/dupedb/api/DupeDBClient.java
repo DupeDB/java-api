@@ -6,7 +6,10 @@ import com.dupedb.api.api.DraftApi;
 import com.dupedb.api.api.ExploitApi;
 import com.dupedb.api.api.MediaApi;
 import com.dupedb.api.api.MetadataApi;
+import com.dupedb.api.api.MyAppsApi;
+import com.dupedb.api.api.OAuthApi;
 import com.dupedb.api.api.ResourceApi;
+import com.dupedb.api.api.SightingApi;
 import com.dupedb.api.api.UserApi;
 import com.dupedb.api.api.UserProfileApi;
 import com.dupedb.api.api.VoteApi;
@@ -34,6 +37,9 @@ public class DupeDBClient implements AutoCloseable {
     private final CommunityApi communityApi;
     private final MediaApi mediaApi;
     private final ResourceApi resourceApi;
+    private final MyAppsApi myAppsApi;
+    private final OAuthApi oauthApi;
+    private final SightingApi sightingApi;
 
     DupeDBClient(String baseUrl, AuthManager authManager) {
         this.baseUrl = baseUrl;
@@ -60,6 +66,9 @@ public class DupeDBClient implements AutoCloseable {
         this.communityApi = new CommunityApi(http);
         this.mediaApi = new MediaApi(http);
         this.resourceApi = new ResourceApi(http);
+        this.myAppsApi = new MyAppsApi(http);
+        this.oauthApi = new OAuthApi(http);
+        this.sightingApi = new SightingApi(http);
     }
 
     /** Search, retrieve, and update exploits. Some endpoints require authentication. */
@@ -96,6 +105,23 @@ public class DupeDBClient implements AutoCloseable {
 
     /** Browse resource categories and individual resources. */
     public ResourceApi resources() { return resourceApi; }
+
+    /**
+     * Manage the authenticated user's owned OAuth applications (self-service).
+     * Backed by the {@code /api/oauth/my-apps} surface introduced in Phase 105.
+     * Requires authentication.
+     */
+    public MyAppsApi myApps() { return myAppsApi; }
+
+    /** OAuth 2.1 protocol operations (RFC 7009 token revocation, etc.). */
+    public OAuthApi oauth() { return oauthApi; }
+
+    /**
+     * Browse community-reported server sightings across all exploits via
+     * {@code /api/sightings/search}. For the authenticated user's own
+     * sightings see {@link #user()}.{@code mySightings()}.
+     */
+    public SightingApi sightings() { return sightingApi; }
 
     /** Returns whether a token is available without triggering an auth flow. */
     public boolean isAuthenticated() {

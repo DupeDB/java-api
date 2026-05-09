@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.dupedb"
-version = "1.0.1"
+version = "1.0.2"
 
 java {
     toolchain {
@@ -26,6 +26,15 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.withType<Javadoc> {
+    (options as StandardJavadocDocletOptions).apply {
+        // Records auto-generate accessor methods; doclint flags missing @param for
+        // every component. Suppress that one category, keep the rest active.
+        addStringOption("Xdoclint:-missing", "-quiet")
+        encoding = "UTF-8"
+    }
 }
 
 

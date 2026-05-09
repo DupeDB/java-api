@@ -10,6 +10,7 @@ public record UserProfile(
     String createdAt,
     int exploitCount,
     int totalUpvotes,
+    int totalViews,
     String discordId,
     String discordAvatar,
     boolean isBanned,

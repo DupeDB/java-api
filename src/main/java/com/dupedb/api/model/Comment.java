@@ -20,6 +20,8 @@ public record Comment(
     int authorUserId,
     String content,
     String datePosted,
+    /** ISO timestamp set when the comment was edited via {@link com.dupedb.api.api.CommentApi#edit(int, String)}; {@code null} for unedited comments. */
+    String editedAt,
     String authorDisplayName,
     String discordId,
     String discordAvatar,
@@ -31,5 +33,7 @@ public record Comment(
     @SerializedName("sighting_id") Integer sightingId,
     @SerializedName("sighting_server_ip") String sightingServerIp,
     @SerializedName("sighting_verified") Integer sightingVerified,
-    @SerializedName("sighting_patched") Integer sightingPatched
+    @SerializedName("sighting_patched") Integer sightingPatched,
+    /** Name of the parent exploit. Populated by {@code GET /api/auth/my-comments}; null elsewhere. */
+    String exploitName
 ) {}

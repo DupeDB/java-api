@@ -64,6 +64,40 @@ public class CommentApi {
         return response != null ? response.comment() : null;
     }
 
+    /**
+     * Edits one of the authenticated user's own comments. Calls
+     * {@code PUT /api/auth/my-comments/:id}.
+     *
+     * <p>If the sanitized {@code content} is identical to what's already stored
+     * the server short-circuits and returns the comment unchanged — in that case
+     * the returned {@link Comment#editedAt()} will not have moved. Compare against
+     * the previous value if you need to distinguish a real edit from a no-op.
+     *
+     * @param commentId the comment to edit (must be owned by the caller)
+     * @param content   new comment body, max 10,000 characters
+     */
+    public Comment edit(int commentId, String content) throws DupeDBException {
+        Map<String, Object> body = Map.of("content", content);
+        EditResponse response = http.put("/api/auth/my-comments/" + commentId,
+            body, EditResponse.class);
+        return response != null ? response.comment() : null;
+    }
+
+    /**
+     * Deletes one of the authenticated user's own comments. Calls
+     * {@code DELETE /api/auth/my-comments/:id}.
+     *
+     * <p>Method named {@code deleteOwn} rather than {@code delete} to make the
+     * ownership constraint explicit at the call site (staff use the admin
+     * endpoint, which is not exposed in this SDK).
+     */
+    public void deleteOwn(int commentId) throws DupeDBException {
+        http.delete("/api/auth/my-comments/" + commentId);
+    }
+
     /** Server response wrapper for {@code POST /api/exploits/:id/comments}. */
     private record AddResponse(String message, Comment comment) {}
+
+    /** Server response wrapper for {@code PUT /api/auth/my-comments/:id}. */
+    private record EditResponse(String message, Comment comment) {}
 }

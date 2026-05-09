@@ -1,21 +1,31 @@
 package com.dupedb.api.auth;
 
-import com.dupedb.api.exception.AuthException;
-import com.dupedb.api.exception.DupeDBException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
-import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests for {@link OAuthFlow} focused on the parts that don't require a real
+ * browser launch:
+ * <ul>
+ *   <li>The static {@code parseParam} query-string helper (preserved from Phase 99).</li>
+ *   <li>The constructor wiring (default port = 0 / ephemeral; appId stored).</li>
+ *   <li>The {@code exchangeCodeForToken} step against an in-process {@code HttpServer}
+ *       — verifies the form-urlencoded wire shape against
+ *       {@code /api/oauth/token} and that the JSON response maps to a
+ *       5-field {@link Credentials} record.</li>
+ * </ul>
+ *
+ * <p>AuthManager-related assertions (memory/disk token resolution, fresh-flow
+ * fallback, single-flight refresh) move to {@code AuthManagerTest} in
+ * plan 103-11. The browser-launch + loopback-callback handler is exercised
+ * end-to-end only by the integration suite.</p>
+ */
 class OAuthFlowTest {
 
-    @TempDir
-    Path tempDir;
-
-    // --- OAuthFlow.parseParam tests ---
+    // --- OAuthFlow.parseParam tests (PRESERVED from Phase 99) ---
 
     @Test
     void parseParamExtractsCodeFromQuery() {
@@ -63,15 +73,13 @@ class OAuthFlowTest {
     // --- OAuthFlow constructor tests ---
 
     @Test
-    void defaultPortIs9876() {
+    void defaultPortIsZero() {
         OAuthFlow flow = new OAuthFlow("https://dupedb.net", "my-app");
-        assertEquals(9876, flow.getCallbackPort());
-    }
-
-    @Test
-    void customPortIsRespected() {
-        OAuthFlow flow = new OAuthFlow("https://dupedb.net", "my-app", 8080);
-        assertEquals(8080, flow.getCallbackPort());
+        // Constructor pins requestedCallbackPort = 0 (ephemeral). resolvedPort
+        // is -1 until authenticateAndExchange() runs (we don't actually run
+        // it here — the browser-launch is not test-friendly).
+        assertEquals(-1, flow.getResolvedPort(),
+            "resolvedPort must be -1 before authenticate; bind happens at runtime");
     }
 
     @Test
@@ -80,94 +88,68 @@ class OAuthFlowTest {
         assertEquals("scanner-app", flow.getAppId());
     }
 
-    // --- AuthManager tests ---
-
     @Test
-    void directTokenReturnsImmediately() throws DupeDBException {
-        AuthManager manager = new AuthManager("dupe_direct_token");
-        assertEquals("dupe_direct_token", manager.getToken());
+    void appIdAccessorReturnsConstructorValue() {
+        OAuthFlow flow = new OAuthFlow("https://dupedb.net", "scanner-bot");
+        assertEquals("scanner-bot", flow.getAppId());
     }
 
-    @Test
-    void directTokenHasTokenReturnsTrue() {
-        AuthManager manager = new AuthManager("dupe_direct_token");
-        assertTrue(manager.hasToken());
-    }
+    // --- /api/oauth/token wire-format test ---
 
     @Test
-    void clearTokenRemovesDirectToken() {
-        AuthManager manager = new AuthManager("dupe_direct_token");
-        assertTrue(manager.hasToken());
+    void exchangeCodeBuildsFormUrlEncodedBodyAgainstLocalServer() throws Exception {
+        // Spin up a tiny HttpServer that asserts the form fields and
+        // returns a /token response. This avoids brittle Gson stubbing
+        // and tests the wire format directly.
+        //
+        // Reuses the com.sun.net.httpserver.HttpServer pattern already in OAuthFlow.
+        // Bind to ephemeral port; capture POST body; respond with canned JSON.
 
-        manager.clearToken();
-        assertFalse(manager.hasToken());
-    }
+        com.sun.net.httpserver.HttpServer server =
+            com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        int port = server.getAddress().getPort();
+        final AtomicReference<String> capturedBody = new AtomicReference<>();
+        final AtomicReference<String> capturedContentType = new AtomicReference<>();
 
-    @Test
-    void getTokenLoadsFromDiskWhenNoMemoryToken() throws DupeDBException, IOException {
-        Path tokenFile = tempDir.resolve("token.json");
-        TokenStore store = new TokenStore(tokenFile);
-        store.save(new Credentials("dupe_disk_token", "my-app", "2026-04-06T12:00:00Z"));
+        server.createContext("/api/oauth/token", exchange -> {
+            capturedContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
+            byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
+            capturedBody.set(new String(bodyBytes, java.nio.charset.StandardCharsets.UTF_8));
+            String json = "{\"access_token\":\"AT_FIXTURE\",\"token_type\":\"Bearer\","
+                       + "\"expires_in\":3600,\"refresh_token\":\"RT_FIXTURE\"}";
+            byte[] resBytes = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, resBytes.length);
+            try (var os = exchange.getResponseBody()) { os.write(resBytes); }
+        });
+        server.start();
 
-        AuthManager manager = new AuthManager(store, null);
-        assertEquals("dupe_disk_token", manager.getToken());
-    }
+        try {
+            OAuthFlow flow = new OAuthFlow("http://127.0.0.1:" + port, "test-app");
+            Credentials c = flow.exchangeCodeForToken("CODE_FIXTURE", "VERIFIER_FIXTURE",
+                "http://127.0.0.1:9876/callback");
 
-    @Test
-    void hasTokenReturnsTrueWhenDiskTokenExists() throws IOException {
-        Path tokenFile = tempDir.resolve("token.json");
-        TokenStore store = new TokenStore(tokenFile);
-        store.save(new Credentials("dupe_disk_token", "my-app", "2026-04-06T12:00:00Z"));
+            // Response → Credentials mapping
+            assertEquals("AT_FIXTURE", c.accessToken());
+            assertEquals("RT_FIXTURE", c.refreshToken());
+            assertEquals("test-app", c.appId());
+            assertNotNull(c.createdAt());
+            assertNotNull(c.expiresAt());
 
-        AuthManager manager = new AuthManager(store, null);
-        assertTrue(manager.hasToken());
-    }
+            // Wire-format assertions on the captured POST body
+            String body = capturedBody.get();
+            assertNotNull(body);
+            assertTrue(body.contains("grant_type=authorization_code"), body);
+            assertTrue(body.contains("code=CODE_FIXTURE"), body);
+            assertTrue(body.contains("code_verifier=VERIFIER_FIXTURE"), body);
+            assertTrue(body.contains("client_id=test-app"), body);
+            // redirect_uri is URL-encoded in the body — assert the encoded form
+            assertTrue(body.contains("redirect_uri=http%3A%2F%2F127.0.0.1%3A9876%2Fcallback"), body);
 
-    @Test
-    void hasTokenReturnsFalseWithNoTokenAnywhere() {
-        Path tokenFile = tempDir.resolve("nonexistent.json");
-        TokenStore store = new TokenStore(tokenFile);
-
-        AuthManager manager = new AuthManager(store, null);
-        assertFalse(manager.hasToken());
-    }
-
-    @Test
-    void getTokenThrowsWhenNoAuthMethodAvailable() {
-        Path tokenFile = tempDir.resolve("nonexistent.json");
-        TokenStore store = new TokenStore(tokenFile);
-
-        AuthManager manager = new AuthManager(store, null);
-        AuthException ex = assertThrows(AuthException.class, manager::getToken);
-        assertTrue(ex.getMessage().contains("No authentication method configured"));
-    }
-
-    @Test
-    void clearTokenDeletesDiskFile() throws IOException {
-        Path tokenFile = tempDir.resolve("token.json");
-        TokenStore store = new TokenStore(tokenFile);
-        store.save(new Credentials("dupe_disk_token", "my-app", "2026-04-06T12:00:00Z"));
-
-        AuthManager manager = new AuthManager(store, null);
-        manager.clearToken();
-
-        assertFalse(tokenFile.toFile().exists());
-        assertFalse(manager.hasToken());
-    }
-
-    @Test
-    void getTokenCachesInMemoryAfterDiskLoad() throws DupeDBException, IOException {
-        Path tokenFile = tempDir.resolve("token.json");
-        TokenStore store = new TokenStore(tokenFile);
-        store.save(new Credentials("dupe_disk_token", "my-app", "2026-04-06T12:00:00Z"));
-
-        AuthManager manager = new AuthManager(store, null);
-
-        // First call loads from disk
-        assertEquals("dupe_disk_token", manager.getToken());
-
-        // Delete file -- second call should still return cached token
-        store.delete();
-        assertEquals("dupe_disk_token", manager.getToken());
+            // Content-Type header must be form-urlencoded (RFC 6749 §4.1.3)
+            assertEquals("application/x-www-form-urlencoded", capturedContentType.get());
+        } finally {
+            server.stop(0);
+        }
     }
 }

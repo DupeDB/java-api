@@ -20,14 +20,32 @@ public class TokenStore {
         this.filePath = filePath;
     }
 
-    /** Loads credentials, or null if missing/corrupted. */
+    /**
+     * Loads credentials, or null if missing/corrupted/legacy.
+     *
+     * <p>Per Phase 103 D-16, v1.x format files (with the legacy {@code token}
+     * field, lacking {@code accessToken}/{@code refreshToken}/{@code expiresAt})
+     * are silently invalidated — Gson populates the missing fields as null,
+     * and any null in the new shape returns null from this method, triggering
+     * a fresh OAuth flow on the next {@link AuthManager#getToken()} call.</p>
+     */
     public Credentials load() {
         if (!Files.exists(filePath)) {
             return null;
         }
         try {
             String json = Files.readString(filePath);
-            return JsonHelper.fromJson(json, Credentials.class);
+            Credentials c = JsonHelper.fromJson(json, Credentials.class);
+            // 1.x files lack accessToken/refreshToken/expiresAt — Gson populates
+            // missing fields as null. Treat any null as invalidation → caller
+            // (AuthManager) triggers a fresh OAuth flow per D-16.
+            if (c == null
+                    || c.accessToken() == null
+                    || c.refreshToken() == null
+                    || c.expiresAt() == null) {
+                return null;
+            }
+            return c;
         } catch (IOException e) {
             return null; // Corrupted file, treat as no token
         }
