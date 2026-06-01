@@ -165,6 +165,29 @@ class HttpExecutorTest {
         assertEquals("Unauthorized", ex.getMessage());
     }
 
+    @Test
+    void mapResponse_errorFieldNull_fallsBackToRawBodyWithoutThrowing() {
+        // {"error": null} previously triggered UnsupportedOperationException inside
+        // the error parser, masking the real HTTP failure. It must now fall back to
+        // the raw body and still surface the original status code.
+        String body = "{\"error\":null}";
+        ApiException ex = assertThrows(ApiException.class, () ->
+            executor.mapResponse(500, body, emptyHeaders(), String.class)
+        );
+        assertEquals(500, ex.getStatusCode());
+        assertEquals(body, ex.getMessage());
+    }
+
+    @Test
+    void mapResponse_errorFieldObject_fallsBackToRawBody() {
+        // A non-string "error" (object) must not break parsing either.
+        String body = "{\"error\":{\"code\":123}}";
+        ApiException ex = assertThrows(ApiException.class, () ->
+            executor.mapResponse(404, body, emptyHeaders(), String.class)
+        );
+        assertEquals(body, ex.getMessage());
+    }
+
     // --- IOException / InterruptedException wrapping tests ---
 
     @Test

@@ -39,7 +39,7 @@ public final class SearchFilters {
     /** Filter by Minecraft edition: {@code java}, {@code bedrock} (comma-separated). */
     public SearchFilters edition(String edition) { this.edition = edition; return this; }
 
-    /** Filter by platform. */
+    /** Filter by platform: {@code singleplayer}, {@code multiplayer} (comma-separated). */
     public SearchFilters platform(String platform) { this.platform = platform; return this; }
 
     /** Filter by Minecraft version (e.g. {@code "1.21.4"}, comma-separated). */

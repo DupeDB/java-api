@@ -47,29 +47,41 @@ class DraftApiTest {
     // --- create ---
 
     @Test
-    void create_delegatesToPostWithCorrectPath() throws DupeDBException {
+    void create_postsThenRefetchesDraft() throws DupeDBException {
         Map<String, Object> data = Map.of("name", "New Exploit");
         api.create(data);
 
-        assertEquals(1, recorder.getCalls().size());
-        RecordingExecutor.Call call = recorder.getCalls().getFirst();
-        assertEquals("POST", call.method());
-        assertEquals("/api/exploits/draft", call.path());
-        assertSame(data, call.body());
+        // POST creates the draft, then a GET re-fetches the saved state — the
+        // create endpoint itself only returns {id, message}.
+        assertEquals(2, recorder.getCalls().size());
+        RecordingExecutor.Call post = recorder.getCalls().get(0);
+        assertEquals("POST", post.method());
+        assertEquals("/api/exploits/draft", post.path());
+        assertSame(data, post.body());
+
+        RecordingExecutor.Call refetch = recorder.getCalls().get(1);
+        assertEquals("GET_CLASS", refetch.method());
+        assertEquals("/api/exploits/draft", refetch.path());
     }
 
     // --- update ---
 
     @Test
-    void update_includesDraftIdInPath() throws DupeDBException {
+    void update_putsThenRefetchesDraft() throws DupeDBException {
         Map<String, Object> data = Map.of("name", "Updated");
         api.update("draft-456", data);
 
-        assertEquals(1, recorder.getCalls().size());
-        RecordingExecutor.Call call = recorder.getCalls().getFirst();
-        assertEquals("PUT", call.method());
-        assertEquals("/api/exploits/draft/draft-456", call.path());
-        assertSame(data, call.body());
+        // PUT saves the edit, then a GET re-fetches the saved state — the
+        // update endpoint itself only returns {message}.
+        assertEquals(2, recorder.getCalls().size());
+        RecordingExecutor.Call put = recorder.getCalls().get(0);
+        assertEquals("PUT", put.method());
+        assertEquals("/api/exploits/draft/draft-456", put.path());
+        assertSame(data, put.body());
+
+        RecordingExecutor.Call refetch = recorder.getCalls().get(1);
+        assertEquals("GET_CLASS", refetch.method());
+        assertEquals("/api/exploits/draft", refetch.path());
     }
 
     // --- delete ---

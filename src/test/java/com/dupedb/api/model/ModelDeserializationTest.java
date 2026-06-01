@@ -42,6 +42,7 @@ class ModelDeserializationTest {
                 "server_ips": ["mc.example.com"],
                 "sources": ["https://example.com"],
                 "plugin_server_ips": [],
+                "plugin_server_ips_pending": ["pending.mc.net"],
                 "mod_links": [],
                 "server_software": ["paper"],
                 "media_files": [],
@@ -94,6 +95,7 @@ class ModelDeserializationTest {
         assertEquals(List.of("mc.example.com"), exploit.serverIps());
         assertEquals(List.of("https://example.com"), exploit.sources());
         assertEquals(List.of(), exploit.pluginServerIps());
+        assertEquals(List.of("pending.mc.net"), exploit.pluginServerIpsPending());
         assertEquals(List.of(), exploit.modLinks());
         assertEquals(List.of("paper"), exploit.serverSoftware());
         assertEquals(List.of(), exploit.mediaFiles());
@@ -539,6 +541,7 @@ class ModelDeserializationTest {
                 "multiplayer_type": "plugin",
                 "minecraft_versions": ["1.21"],
                 "server_ips": [],
+                "plugin_server_ips": ["mc.test.net"],
                 "sources": [],
                 "plugins": ["Factions"],
                 "plugin_name": "Factions",
@@ -567,6 +570,7 @@ class ModelDeserializationTest {
         assertEquals("plugin", draft.multiplayerType());
         assertEquals(List.of("1.21"), draft.minecraftVersions());
         assertEquals(List.of(), draft.serverIps());
+        assertEquals(List.of("mc.test.net"), draft.pluginServerIps());
         assertEquals(List.of(), draft.sources());
         assertEquals(List.of("Factions"), draft.plugins());
         assertEquals("Factions", draft.pluginName());
@@ -759,13 +763,15 @@ class ModelDeserializationTest {
     // ---- LatestActivity ----
 
     @Test
-    void latestActivityDeserializesFromSnakeCaseJson() {
+    void latestActivityDeserializesExploitVariant() {
         String json = """
             {
+                "kind": "exploit",
                 "id": 99,
                 "name": "Test Exploit",
                 "status": "verified",
                 "date_submitted": "2026-04-01T00:00:00Z",
+                "published_at": "2026-04-02T12:00:00Z",
                 "date_modified": "2026-04-02T00:00:00Z",
                 "author": "testuser",
                 "author_user_id": 5,
@@ -777,10 +783,14 @@ class ModelDeserializationTest {
             """;
 
         LatestActivity activity = JsonHelper.fromJson(json, LatestActivity.class);
+        assertEquals("exploit", activity.kind());
+        assertTrue(activity.isExploit());
+        assertFalse(activity.isSighting());
         assertEquals(99, activity.id());
         assertEquals("Test Exploit", activity.name());
         assertEquals("verified", activity.status());
         assertEquals("2026-04-01T00:00:00Z", activity.dateSubmitted());
+        assertEquals("2026-04-02T12:00:00Z", activity.publishedAt());
         assertEquals("2026-04-02T00:00:00Z", activity.dateModified());
         assertEquals("testuser", activity.author());
         assertEquals(5, activity.authorUserId());
@@ -788,6 +798,50 @@ class ModelDeserializationTest {
         assertEquals("/uploads/avatar.png", activity.authorCustomAvatar());
         assertEquals("123456", activity.authorDiscordId());
         assertEquals("abc123", activity.authorDiscordAvatar());
+        // Sighting-variant fields are absent on the exploit variant.
+        assertNull(activity.sightingId());
+        assertNull(activity.serverIp());
+        assertNull(activity.exploitName());
+    }
+
+    @Test
+    void latestActivityDeserializesSightingVariant() {
+        String json = """
+            {
+                "kind": "sighting",
+                "sighting_id": 77,
+                "exploit_id": "abc123",
+                "server_ip": "mc.example.com",
+                "verified_at": "2026-05-01T00:00:00Z",
+                "exploit_name": "Dupe Exploit",
+                "exploit_status": "verified",
+                "reported_by_user_id": 8,
+                "reporter_display_name": "Spotter",
+                "reporter_custom_avatar": "/uploads/spotter.png",
+                "reporter_discord_id": "987654",
+                "reporter_discord_avatar": "def456"
+            }
+            """;
+
+        LatestActivity activity = JsonHelper.fromJson(json, LatestActivity.class);
+        assertEquals("sighting", activity.kind());
+        assertTrue(activity.isSighting());
+        assertFalse(activity.isExploit());
+        assertEquals(77, activity.sightingId());
+        assertEquals("abc123", activity.exploitId());
+        assertEquals("mc.example.com", activity.serverIp());
+        assertEquals("2026-05-01T00:00:00Z", activity.verifiedAt());
+        assertEquals("Dupe Exploit", activity.exploitName());
+        assertEquals("verified", activity.exploitStatus());
+        assertEquals(8, activity.reportedByUserId());
+        assertEquals("Spotter", activity.reporterDisplayName());
+        assertEquals("/uploads/spotter.png", activity.reporterCustomAvatar());
+        assertEquals("987654", activity.reporterDiscordId());
+        assertEquals("def456", activity.reporterDiscordAvatar());
+        // Exploit-variant fields are absent on the sighting variant.
+        assertNull(activity.id());
+        assertNull(activity.name());
+        assertNull(activity.author());
     }
 
     // ---- UserProfile ----
@@ -875,7 +929,6 @@ class ModelDeserializationTest {
                 "customDescription": "Custom desc",
                 "fetchedDescription": "Fetched desc",
                 "displayOrder": 1,
-                "isVisible": true,
                 "createdAt": "2025-06-01T00:00:00Z",
                 "updatedAt": "2025-06-15T00:00:00Z",
                 "createdByUsername": "admin",
@@ -902,7 +955,6 @@ class ModelDeserializationTest {
         assertEquals("Custom desc", community.customDescription());
         assertEquals("Fetched desc", community.fetchedDescription());
         assertEquals(1, community.displayOrder());
-        assertTrue(community.isVisible());
         assertEquals("2025-06-01T00:00:00Z", community.createdAt());
         assertEquals("2025-06-15T00:00:00Z", community.updatedAt());
         assertEquals("admin", community.createdByUsername());
@@ -1045,12 +1097,13 @@ class ModelDeserializationTest {
     @Test
     void publicStatsDeserializesFromCamelCaseJson() {
         String json = """
-            {"verifiedCount": 100, "unverifiedCount": 50, "userCount": 500}
+            {"verifiedCount": 100, "unverifiedCount": 50, "userCount": 500, "sightingsCount": 320}
             """;
         PublicStats stats = JsonHelper.fromJson(json, PublicStats.class);
         assertEquals(100, stats.verifiedCount());
         assertEquals(50, stats.unverifiedCount());
         assertEquals(500, stats.userCount());
+        assertEquals(320, stats.sightingsCount());
     }
 
     // ---- StatsSnapshot ----
@@ -1058,12 +1111,13 @@ class ModelDeserializationTest {
     @Test
     void statsSnapshotDeserializesFromJson() {
         String json = """
-            {"timestamp": "2025-06-01T00:00:00Z", "verified": 95, "users": 480}
+            {"timestamp": "2025-06-01T00:00:00Z", "verified": 95, "users": 480, "sightings": 310}
             """;
         StatsSnapshot s = JsonHelper.fromJson(json, StatsSnapshot.class);
         assertEquals("2025-06-01T00:00:00Z", s.timestamp());
         assertEquals(95, s.verified());
         assertEquals(480, s.users());
+        assertEquals(310, s.sightings());
     }
 
     // ---- HealthStatus ----

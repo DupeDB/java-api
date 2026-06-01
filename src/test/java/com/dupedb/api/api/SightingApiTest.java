@@ -78,6 +78,48 @@ class SightingApiTest {
             "Expected encoded serverIp filter, got: " + call.path());
     }
 
+    @Test
+    void search_withSightingFilters_includesEveryParam() throws DupeDBException {
+        api.search("", 1, new SightingFilters()
+            .status("working,patched")
+            .serverIp("mc.example.com")
+            .playerMin(10)
+            .playerMax(200)
+            .sort("verified_player_count")
+            .order("desc")
+            .limit(50));
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        String path = call.path();
+        assertTrue(path.contains("status=working%2Cpatched"), path);
+        assertTrue(path.contains("serverIp=mc.example.com"), path);
+        assertTrue(path.contains("playerMin=10"), path);
+        assertTrue(path.contains("playerMax=200"), path);
+        assertTrue(path.contains("sort=verified_player_count"), path);
+        assertTrue(path.contains("order=desc"), path);
+        assertTrue(path.contains("limit=50"), path);
+    }
+
+    @Test
+    void search_withNullSightingFilters_omitsFilterParams() throws DupeDBException {
+        api.search("hub", 1, (SightingFilters) null);
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("/api/sightings/search?q=hub&page=1", call.path());
+    }
+
+    @Test
+    void search_withNullFilterValue_skipsEntryWithoutThrowing() throws DupeDBException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        filters.put("status", "working");
+        filters.put("playerMin", null); // must be skipped, not NPE on encode(null)
+        api.search("", 1, filters);
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertTrue(call.path().contains("status=working"));
+        assertFalse(call.path().contains("playerMin"));
+    }
+
     // --- autocomplete ---
 
     @Test

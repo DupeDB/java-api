@@ -15,7 +15,6 @@ public record Community(
     @SerializedName("customDescription") String customDescription,
     @SerializedName("fetchedDescription") String fetchedDescription,
     @SerializedName("displayOrder") int displayOrder,
-    @SerializedName("isVisible") boolean isVisible,
     @SerializedName("createdAt") String createdAt,
     @SerializedName("updatedAt") String updatedAt,
     @SerializedName("createdByUsername") String createdByUsername,

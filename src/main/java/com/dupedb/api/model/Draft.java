@@ -14,6 +14,7 @@ public record Draft(
     String multiplayerType,
     List<String> minecraftVersions,
     List<String> serverIps,
+    List<String> pluginServerIps,
     List<String> sources,
     List<String> plugins,
     String pluginName,

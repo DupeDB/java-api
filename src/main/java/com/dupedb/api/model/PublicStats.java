@@ -6,5 +6,6 @@ import com.google.gson.annotations.SerializedName;
 public record PublicStats(
     @SerializedName("verifiedCount") int verifiedCount,
     @SerializedName("unverifiedCount") int unverifiedCount,
-    @SerializedName("userCount") int userCount
+    @SerializedName("userCount") int userCount,
+    @SerializedName("sightingsCount") int sightingsCount
 ) {}

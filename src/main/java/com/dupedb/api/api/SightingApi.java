@@ -46,6 +46,9 @@ public class SightingApi {
         path.append("&page=").append(page);
         if (filters != null) {
             for (var entry : filters.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null) {
+                    continue; // skip incomplete filter entries rather than emitting "null"
+                }
                 path.append("&").append(encode(entry.getKey()))
                     .append("=").append(encode(entry.getValue()));
             }
@@ -55,7 +58,20 @@ public class SightingApi {
 
     /** Searches sightings without filters. */
     public SightingSearchResult search(String query, int page) throws DupeDBException {
-        return search(query, page, null);
+        return search(query, page, (Map<String, String>) null);
+    }
+
+    /**
+     * Searches sightings with a typed {@link SightingFilters} builder — the API
+     * equivalent of the site's community sightings filter sidebar.
+     *
+     * @param query   free-text query (matches server_ip and exploit name); may be empty
+     * @param page    1-based page number
+     * @param filters typed filters (may be null)
+     */
+    public SightingSearchResult search(String query, int page, SightingFilters filters)
+            throws DupeDBException {
+        return search(query, page, filters != null ? filters.toMap() : null);
     }
 
     /**
@@ -74,6 +90,6 @@ public class SightingApi {
     }
 
     private static String encode(String s) {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8);
+        return s == null ? "" : URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

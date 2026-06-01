@@ -20,16 +20,24 @@ public class DraftApi {
         return response != null ? response.draft() : null;
     }
 
-    /** Creates a new draft. Only one draft per account. Calls {@code POST /api/exploits/draft}. */
+    /**
+     * Creates a new draft and returns the saved state. Only one draft per account.
+     * Calls {@code POST /api/exploits/draft}, then re-fetches via {@link #getCurrent()}
+     * (the create endpoint itself only returns {@code {id, message}}).
+     */
     public Draft create(Map<String, Object> data) throws DupeDBException {
-        DraftResponse response = http.post("/api/exploits/draft", data, DraftResponse.class);
-        return response != null ? response.draft() : null;
+        http.post("/api/exploits/draft", data, Void.class);
+        return getCurrent();
     }
 
-    /** Updates a draft. Calls {@code PUT /api/exploits/draft/:id}. */
+    /**
+     * Updates a draft and returns the saved state. Calls {@code PUT /api/exploits/draft/:id},
+     * then re-fetches via {@link #getCurrent()} (the update endpoint itself only returns
+     * {@code {message}}). Callers driving a tight auto-save loop may ignore the return value.
+     */
     public Draft update(String id, Map<String, Object> data) throws DupeDBException {
-        DraftResponse response = http.put("/api/exploits/draft/" + id, data, DraftResponse.class);
-        return response != null ? response.draft() : null;
+        http.put("/api/exploits/draft/" + id, data, Void.class);
+        return getCurrent();
     }
 
     /** Deletes a draft. Calls {@code DELETE /api/exploits/draft/:id}. */

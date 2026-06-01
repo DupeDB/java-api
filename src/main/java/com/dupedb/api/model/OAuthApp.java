@@ -8,9 +8,6 @@ import java.util.List;
  * <p>Returned by the self-service surface ({@code GET /api/oauth/my-apps} list
  * items, {@code POST /api/oauth/my-apps}) and by single-record admin endpoints
  * ({@code GET /api/oauth/apps/:id}, {@code POST /api/oauth/apps}).</p>
- *
- * @see AdminOAuthApp for admin-list shape with {@code ownerUsername} and
- *      {@code activeTokenCount}.
  */
 public record OAuthApp(
     String id,

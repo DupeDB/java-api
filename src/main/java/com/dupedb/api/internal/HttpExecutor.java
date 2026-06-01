@@ -377,13 +377,13 @@ public class HttpExecutor implements AutoCloseable {
                     if (contentType == null) {
                         contentType = "application/octet-stream";
                     }
-                    byteArrays.add(("Content-Disposition: form-data; name=\"" + name
-                        + "\"; filename=\"" + filename + "\"\r\n"
+                    byteArrays.add(("Content-Disposition: form-data; name=\"" + escapeHeaderField(name)
+                        + "\"; filename=\"" + escapeHeaderField(filename) + "\"\r\n"
                         + "Content-Type: " + contentType + "\r\n\r\n")
                         .getBytes(StandardCharsets.UTF_8));
                     byteArrays.add(Files.readAllBytes(filePath));
                 } else {
-                    byteArrays.add(("Content-Disposition: form-data; name=\"" + name + "\"\r\n\r\n"
+                    byteArrays.add(("Content-Disposition: form-data; name=\"" + escapeHeaderField(name) + "\"\r\n\r\n"
                         + value).getBytes(StandardCharsets.UTF_8));
                 }
                 byteArrays.add("\r\n".getBytes(StandardCharsets.UTF_8));
@@ -394,6 +394,19 @@ public class HttpExecutor implements AutoCloseable {
         }
 
         return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
+    }
+
+    /**
+     * Escapes a multipart header parameter (a form field {@code name} or a
+     * {@code filename}) so a stray quote or line break cannot break out of the
+     * {@code Content-Disposition} header. Percent-encodes CR, LF, and {@code "}
+     * per the WHATWG/RFC 2388 convention.
+     */
+    private static String escapeHeaderField(String value) {
+        return value
+            .replace("\r", "%0D")
+            .replace("\n", "%0A")
+            .replace("\"", "%22");
     }
 
     private HttpRequest.Builder buildRequest(String path) {
@@ -563,7 +576,10 @@ public class HttpExecutor implements AutoCloseable {
         }
         try {
             JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
-            if (obj.has("error")) {
+            // Only unwrap when "error" is a string. Guards against {"error": null}
+            // (JsonNull.getAsString() throws) and {"error": {...}} — fall back to
+            // the raw body in those cases rather than masking the real response.
+            if (obj.has("error") && obj.get("error").isJsonPrimitive()) {
                 return obj.get("error").getAsString();
             }
         } catch (JsonSyntaxException | IllegalStateException e) {

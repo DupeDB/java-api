@@ -1,6 +1,6 @@
 # DupeDB-API
 
-[![](https://jitpack.io/v/Aurickk/dupedb-api.svg)](https://jitpack.io/#Aurickk/dupedb-api)
+[![](https://jitpack.io/v/DupeDB/api.svg)](https://jitpack.io/#DupeDB/api)
 
 Java library for the DupeDB Minecraft exploit database API. 
 
@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.Aurickk:dupedb-api:1.0.2")
+    implementation("com.github.DupeDB:api:1.0.2")
 }
 ```
 
@@ -40,22 +40,24 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.Aurickk:dupedb-api:1.0.2'
+    implementation 'com.github.DupeDB:api:1.0.2'
 }
 ```
 
 ## OAuth App Registration
 
-To use authenticated endpoints, you need a registered OAuth app. Open a ticket in the [DupeDB Discord](https://discord.com/invite/J5fQrKVxrC) and provide:
+Authenticated endpoints require an OAuth app. Apps are free and self-service — there's no approval step.
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| **App ID** | Unique slug (`3-32` lowercase alphanumeric + dashes) | `my-fabric-mod` |
-| **App Name** | Shown to users on the consent screen (max 100 chars) | `My Fabric Mod` |
-| **Redirect URIs** | Callback URLs (exact match, one per environment) | `http://localhost:9876/callback` |
-| **Read-Only** | Whether the app only needs read access | `false` |
+1. **Sign in** at [dupedb.net](https://dupedb.net) with Discord.
+2. Open **[Settings → App settings](https://dupedb.net/settings/oauth-apps)** and create a new app.
+3. Fill in the form:
+   - **App ID (slug)** — your app's permanent identifier. 3–32 characters, lowercase letters, numbers, and dashes (e.g. `my-java-app`). It **cannot be changed later** and cannot start with a reserved word (`dupedb`, `admin`, `staff`, `mod`, `official`, `system`, `bot`).
+   - **Display Name** — the name shown to users on the consent screen (e.g. `My Java App`).
+   - **Permission Level** — *Full Access*, or *Read Only* (browse only — a read-only app cannot vote, comment, submit drafts, or upload).
+   - **App Type** — choose **Desktop / CLI** for a mod, plugin, bot, or desktop tool that uses this library. The loopback redirect `http://127.0.0.1/callback` is registered for you, and its port is wildcarded at runtime so any free local port works. Choose **Web App** only if you handle the OAuth callback on your own HTTPS server.
+4. Copy the **App ID** — that's the only value the library needs. This is a public PKCE client, so there is **no client secret**.
 
-The app ID cannot be changed after creation. See the full [Developer Documentation](https://dupedb.net/resource/developer-documentation) for details on the OAuth flow, permissions, and token handling.
+You can register up to 5 apps per account and manage them anytime from the same page (or programmatically via `client.myApps()`). See the full [Developer Documentation](https://dupedb.net/resource/developer-documentation) for the underlying OAuth flow and token handling.
 
 ## Usage
 
@@ -77,27 +79,31 @@ SearchResult<ExploitCard> results = client.exploits().search("elytra", 1);
 ```
 
 ### Authenticated with OAuth (desktop/mod usage)
+
+Pass the **App ID** from registration. The redirect URI must be a `127.0.0.1` loopback URL: the library starts a local listener on its port, opens the user's browser to approve access, then captures the callback and exchanges it for a token. The token is written to `tokenStore` and refreshed automatically, so the user only approves once.
+
 ```java
 DupeDBClient client = DupeDB.client()
-    .oauth("your-app-id", "http://localhost:9876/callback")
+    .oauth("my-java-app", "http://127.0.0.1:9876/callback")
     .tokenStore(Path.of("config/dupedb-token.json"))
     .build();
 
-// Opens browser for auth on first use, saves token for future sessions
+// First authenticated call opens the browser; later runs reuse the saved token.
 User me = client.user().me();
 ```
+
+> Use `127.0.0.1`, not `localhost` — the server matches the loopback host exactly (only the port is wildcarded). Any free port works; `9876` is just an example. Omit `.tokenStore(...)` to fall back to the default `~/.dupedb/token.json`.
 
 ### Which auth mode to use
 
 | Context | Auth Mode | Why |
 |---------|-----------|-----|
 | Fabric/Forge client mod | OAuth | Player is at their desktop so browser flow works naturally. Token is saved so the player only authenticates once. |
-| Paper/Spigot server plugin | Token | Servers run headless with no browser available. Generate a token on dupedb.net and pass it in config. |
 | Read-only / public data | None | A handful of endpoints (health, version, public stats, exploit meta, site visibility) need no auth. Most metadata and detail lookups now require a token. |
 
 ### Threading
 
-All API calls are **blocking HTTP requests**. Never call them on Minecraft's main thread -- this will freeze the game or trigger the server watchdog.
+All API calls are **blocking HTTP requests**. Never call them on Minecraft's main thread as it might freeze the game or trigger the server anti-cheat.
 
 ```java
 // Fabric example -- run off the main thread
@@ -168,7 +174,23 @@ Cross-exploit community sighting browse. For your own sightings see `user().mySi
 |--------|----------|------|
 | `sightings().search(query, page)` | GET /api/sightings/search | Yes |
 | `sightings().search(query, page, filters)` | GET /api/sightings/search | Yes |
+| `sightings().search(query, page, SightingFilters)` | GET /api/sightings/search | Yes |
 | `sightings().autocomplete(prefix)` | GET /api/sightings/search?autocomplete=1 | Yes |
+
+Exploit and sighting search expose the full set of filters and sort options from the
+site's filter sidebar via the type-safe `SearchFilters` / `SightingFilters` builders:
+
+```java
+// Exploits -- same knobs as the browse page filter sidebar
+client.exploits().search("", 1, new SearchFilters()
+    .status("verified,working").edition("java").version("1.21.4")
+    .sort("upvotes").order("desc"));
+
+// Sightings -- status, server IP, player-count range, sort
+client.sightings().search("", 1, new SightingFilters()
+    .status("working").playerMin(20)
+    .sort("verified_player_count").order("desc"));
+```
 
 ### Drafts
 
@@ -179,6 +201,16 @@ Cross-exploit community sighting browse. For your own sightings see `user().mySi
 | `drafts().update(id, data)` | PUT /api/exploits/draft/:id | Yes |
 | `drafts().delete(id)` | DELETE /api/exploits/draft/:id | Yes |
 | `drafts().submit(id)` | POST /api/exploits/draft/:id/submit | Yes |
+
+`create(data)` and `update(id, data)` return the saved `Draft` (each re-fetches the
+draft after writing, since the create/update endpoints themselves return only an id
+or a status message). Only one draft exists per account. A full lifecycle looks like:
+
+```java
+Draft draft = client.drafts().create(Map.of("name", "My dupe", "edition", "java"));
+draft = client.drafts().update(draft.id(), Map.of("description", "Steps..."));
+client.drafts().submit(draft.id());
+```
 
 ### Current User
 
