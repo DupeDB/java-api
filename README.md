@@ -1,6 +1,6 @@
-# DupeDB-API
+# DupeDB-API (JAVA)
 
-[![](https://jitpack.io/v/DupeDB/api.svg)](https://jitpack.io/#DupeDB/api)
+[![](https://jitpack.io/v/DupeDB/java-api.svg)](https://jitpack.io/#DupeDB/java-api)
 
 Java library for the DupeDB Minecraft exploit database API. 
 
@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.DupeDB:api:1.0.2")
+    implementation("com.github.DupeDB:java-api:1.0.2")
 }
 ```
 
@@ -40,7 +40,7 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.DupeDB:api:1.0.2'
+    implementation 'com.github.DupeDB:java-api:1.0.2'
 }
 ```
 
