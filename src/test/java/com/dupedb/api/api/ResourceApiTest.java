@@ -18,12 +18,14 @@ class ResourceApiTest {
     }
 
     @Test
-    void categories_delegatesToGetWithCorrectPath() throws DupeDBException {
+    void categories_readsSlugsOffListEndpoint() throws DupeDBException {
+        // The dedicated /api/resources/categories endpoint was removed
+        // (June 2026) — slugs now ride the list response.
         api.categories();
         assertEquals(1, recorder.getCalls().size());
         RecordingExecutor.Call call = recorder.getCalls().getFirst();
         assertEquals("GET_CLASS", call.method());
-        assertEquals("/api/resources/categories", call.path());
+        assertEquals("/api/resources/", call.path());
     }
 
     @Test
@@ -35,10 +37,10 @@ class ResourceApiTest {
     }
 
     @Test
-    void listByCategory_includesCategoryParam() throws DupeDBException {
-        api.list(3);
+    void listByCategory_includesCategorySlugParam() throws DupeDBException {
+        api.list("mods");
         RecordingExecutor.Call call = recorder.getCalls().getFirst();
-        assertEquals("/api/resources/?category=3", call.path());
+        assertEquals("/api/resources/?category=mods", call.path());
     }
 
     @Test

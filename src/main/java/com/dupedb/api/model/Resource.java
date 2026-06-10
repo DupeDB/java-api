@@ -2,15 +2,20 @@ package com.dupedb.api.model;
 
 import com.google.gson.annotations.SerializedName;
 
-/** A resource entry (guide, mod, article, etc.). */
+/**
+ * A resource entry (guide, mod, article, etc.).
+ *
+ * <p>{@code category} is one of the fixed slugs {@code "documentation"},
+ * {@code "video"}, or {@code "mods"} — the dynamic category table (with
+ * {@code categoryId}/{@code categoryName}) was retired in June 2026.
+ */
 public record Resource(
     int id,
     String title,
     String slug,
     String description,
     String content,
-    @SerializedName("categoryId") Integer categoryId,
-    @SerializedName("categoryName") String categoryName,
+    String category,
     @SerializedName("resourceType") String resourceType,
     @SerializedName("externalUrl") String externalUrl,
     @SerializedName("iconUrl") String iconUrl,

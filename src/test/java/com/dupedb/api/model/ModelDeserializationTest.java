@@ -1038,19 +1038,6 @@ class ModelDeserializationTest {
         assertEquals("File deleted successfully", result.message());
     }
 
-    // ---- ResourceCategory ----
-
-    @Test
-    void resourceCategoryDeserializesFromSnakeCaseJson() {
-        String json = """
-            {"id": 1, "name": "Guides", "display_order": 2, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-06-01T00:00:00Z"}
-            """;
-        ResourceCategory cat = JsonHelper.fromJson(json, ResourceCategory.class);
-        assertEquals(1, cat.id());
-        assertEquals("Guides", cat.name());
-        assertEquals(2, cat.displayOrder());
-    }
-
     // ---- Resource ----
 
     @Test
@@ -1059,7 +1046,7 @@ class ModelDeserializationTest {
             {
                 "id": 5, "title": "Getting Started", "slug": "getting-started",
                 "description": "A guide", "content": "<p>Hello</p>",
-                "categoryId": 1, "categoryName": "Guides",
+                "category": "documentation",
                 "resourceType": "guide", "externalUrl": null,
                 "iconUrl": "/uploads/icon.png", "bannerUrl": null,
                 "isPublished": true, "createdBy": 42,
@@ -1073,8 +1060,7 @@ class ModelDeserializationTest {
         assertEquals(5, r.id());
         assertEquals("Getting Started", r.title());
         assertEquals("getting-started", r.slug());
-        assertEquals(1, r.categoryId());
-        assertEquals("Guides", r.categoryName());
+        assertEquals("documentation", r.category());
         assertEquals("guide", r.resourceType());
         assertTrue(r.isPublished());
         assertEquals("admin", r.authorUsername());

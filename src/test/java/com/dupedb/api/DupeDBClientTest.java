@@ -40,6 +40,28 @@ class DupeDBClientTest {
     }
 
     @Test
+    void builder_withPersonalAccessToken_buildsAuthenticatedClient() {
+        DupeDBClient client = DupeDB.client()
+            .baseUrl("https://test.dupedb.net")
+            .personalAccessToken("dupe_pat_" + "a".repeat(64))
+            .build();
+        assertNotNull(client);
+        assertTrue(client.isAuthenticated());
+    }
+
+    @Test
+    void builder_personalAccessToken_rejectsNonPatValues() {
+        // OAuth access tokens, internal keys, and nulls must fail eagerly
+        // with a pointer to .token(...) rather than 401 on the first call.
+        assertThrows(IllegalArgumentException.class, () ->
+            DupeDB.client().personalAccessToken("dupe_" + "a".repeat(64)));
+        assertThrows(IllegalArgumentException.class, () ->
+            DupeDB.client().personalAccessToken("some-oauth-access-token"));
+        assertThrows(IllegalArgumentException.class, () ->
+            DupeDB.client().personalAccessToken(null));
+    }
+
+    @Test
     void builder_withOAuth_buildsClientWithoutEagerTokenResolution() {
         // OAuth client should NOT eagerly resolve token at build() time.
         // No server is running, so if it tried to resolve eagerly, it would fail.

@@ -29,5 +29,10 @@ public record BotSighting(
     String content,
     @SerializedName("verified_player_count") Integer verifiedPlayerCount,
     @SerializedName("player_gate_qualifies") Integer playerGateQualifies,
-    @SerializedName("server_icon") String serverIcon
+    @SerializedName("server_icon") String serverIcon,
+    /**
+     * Discord-bot control flag (verified feed only): {@code 0} → suppress the
+     * custom-message prefix + role ping. {@code null} on the unverified feed.
+     */
+    @SerializedName("notify_with_mention") Integer notifyWithMention
 ) {}

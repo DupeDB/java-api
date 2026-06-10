@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.DupeDB:java-api:1.0.2")
+    implementation("com.github.DupeDB:java-api:1.0.3")
 }
 ```
 
@@ -40,16 +40,40 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.DupeDB:java-api:1.0.2'
+    implementation 'com.github.DupeDB:java-api:1.0.3'
 }
 ```
 
+## Authentication: PAT or OAuth?
+
+There are two ways to authenticate, depending on who the integration acts as:
+
+| | Personal Access Token | OAuth App |
+|---|---|---|
+| **Acts as** | You (your own account) | Whichever user authorized your app |
+| **Setup** | Two clicks in settings | App registration + browser consent flow |
+| **Use for** | Your own scripts, server plugins, personal bots | Mods/tools that **other people** install and sign into |
+
+### Personal Access Token (simplest)
+
+Create a token at **[Settings → Developer](https://dupedb.net/settings/developer)** → *Personal Access Tokens* → **Create Token**. Copy it from the dialog — it's shown exactly once.
+
+```java
+DupeDBClient client = DupeDB.client()
+    .personalAccessToken("dupe_pat_...")
+    .build();
+
+User me = client.user().me();   // authenticated as you, no browser flow
+```
+
+PATs never expire (revoke them from the same settings page), always act at the `user` role, and are rate-limited like any other caller. **Treat a PAT like your password** — don't commit it or ship it inside a distributed mod jar. If your project is installed by other users, register an OAuth app instead.
+
 ## OAuth App Registration
 
-Authenticated endpoints require an OAuth app. Apps are free and self-service — there's no approval step.
+OAuth apps act on behalf of the user who authorizes them. Apps are free and self-service — there's no approval step.
 
 1. **Sign in** at [dupedb.net](https://dupedb.net) with Discord.
-2. Open **[Settings → App settings](https://dupedb.net/settings/oauth-apps)** and create a new app.
+2. Open **[Settings → Developer](https://dupedb.net/settings/developer)** and create a new app.
 3. Fill in the form:
    - **App ID (slug)** — your app's permanent identifier. 3–32 characters, lowercase letters, numbers, and dashes (e.g. `my-java-app`). It **cannot be changed later** and cannot start with a reserved word (`dupedb`, `admin`, `staff`, `mod`, `official`, `system`, `bot`).
    - **Display Name** — the name shown to users on the consent screen (e.g. `My Java App`).
@@ -69,14 +93,16 @@ PublicStats stats = client.metadata().publicStats();
 ExploitMeta meta = client.exploits().getMeta("abc12345678");
 ```
 
-### Authenticated with token (headless servers)
+### Authenticated with a personal access token (headless servers, own-account scripts)
 ```java
 DupeDBClient client = DupeDB.client()
-    .token("dupe_your_token_here")
+    .personalAccessToken("dupe_pat_your_token_here")
     .build();
 
 SearchResult<ExploitCard> results = client.exploits().search("elytra", 1);
 ```
+
+`.token(...)` also accepts any raw Bearer credential (e.g. an OAuth access token you obtained elsewhere) — `.personalAccessToken(...)` is the same thing plus an eager prefix check, so a wrong paste fails at build time instead of as a 401.
 
 ### Authenticated with OAuth (desktop/mod usage)
 
@@ -99,6 +125,7 @@ User me = client.user().me();
 | Context | Auth Mode | Why |
 |---------|-----------|-----|
 | Fabric/Forge client mod | OAuth | Player is at their desktop so browser flow works naturally. Token is saved so the player only authenticates once. |
+| Your own script / server plugin / bot | Personal access token | Acts as your account with no browser flow. Create at [Settings → Developer](https://dupedb.net/settings/developer); never ship it in a distributed jar. |
 | Read-only / public data | None | A handful of endpoints (health, version, public stats, exploit meta, site visibility) need no auth. Most metadata and detail lookups now require a token. |
 
 ### Threading
@@ -275,9 +302,9 @@ client.drafts().submit(draft.id());
 
 | Method | Endpoint | Auth |
 |--------|----------|------|
-| `resources().categories()` | GET /api/resources/categories | No |
+| `resources().categories()` | GET /api/resources/ (reads `categories`) | No |
 | `resources().list()` | GET /api/resources/ | No |
-| `resources().list(categoryId)` | GET /api/resources/?category=:id | No |
+| `resources().list(categorySlug)` | GET /api/resources/?category=:slug | No |
 | `resources().getById(id)` | GET /api/resources/id/:id | No |
 | `resources().getBySlug(slug)` | GET /api/resources/:slug | No |
 

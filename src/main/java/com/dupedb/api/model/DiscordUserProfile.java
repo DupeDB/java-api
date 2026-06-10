@@ -7,9 +7,12 @@ import com.google.gson.annotations.SerializedName;
  * Discord ID via {@code GET /api/users/discord/:discordId/profile}.
  *
  * <p>Wider shape than {@link UserProfile} (the by-user-id variant) — this one
- * carries the full v5 points-system breakdown including the "consolation"
- * tier (server-specific exploits whose verification ping failed the player
- * gate) and the gated counts that drive the Discord bot leaderboard.
+ * carries the full v9 points-system breakdown: {@code basePts} (flat award per
+ * verified contribution) plus {@code bonusPts} (signal bonuses from views,
+ * upvotes, verified player counts, and plugin downloads), and the gated counts
+ * that drive the Discord bot leaderboard. The legacy v5 {@code consolation*}
+ * fields are still emitted by the server but the consolation tier itself is
+ * retired — new rows always award the full tier.
  *
  * <p>{@code leaderboardRank} is {@code null} when {@code points == 0}
  * (excluded from rank computation).
@@ -35,6 +38,8 @@ public record DiscordUserProfile(
     @SerializedName("consolation_exploit_pts") double consolationExploitPts,
     @SerializedName("consolation_sighting_pts") double consolationSightingPts,
     double points,
+    @SerializedName("base_pts") double basePts,
+    @SerializedName("bonus_pts") double bonusPts,
     @SerializedName("leaderboard_rank") Integer leaderboardRank,
     @SerializedName("total_upvotes") int totalUpvotes,
     @SerializedName("total_views") int totalViews

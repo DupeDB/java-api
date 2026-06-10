@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * One row from {@code GET /api/users/discord/:discordId/contributions}: a
  * single verified exploit, credit, or sighting that contributed to the user's
- * v5 points total.
+ * v9 points total.
  *
  * <p>{@code kind} is one of:
  * <ul>
@@ -15,9 +15,13 @@ import com.google.gson.annotations.SerializedName;
  *   <li>{@code "sighting"} — the user reported a verified server sighting</li>
  * </ul>
  *
- * <p>{@code tier} is {@code "full"} or {@code "consolation"} (server-specific
- * exploits whose verification-time player-count ping fell below the gate get
- * the consolation tier with a 0.1 point payout).
+ * <p>{@code points = basePts + bonusPts}. The per-signal bonus columns
+ * ({@code viewBonus}, {@code upvoteBonus}, {@code playerBonus},
+ * {@code downloadBonus}) break {@code bonusPts} down by source signal.
+ *
+ * <p>{@code tier} is always {@code "full"} since the v9 points overhaul —
+ * the v5 {@code "consolation"} tier is retired (kept as a field for
+ * forward compatibility).
  *
  * <p>{@code role} is one of {@code "author_found"},
  * {@code "author_self_credit"}, {@code "author_submit_only"},
@@ -33,5 +37,11 @@ public record Contribution(
     String date,
     double points,
     String tier,
-    String role
+    String role,
+    @SerializedName("base_pts") double basePts,
+    @SerializedName("bonus_pts") double bonusPts,
+    @SerializedName("view_bonus") double viewBonus,
+    @SerializedName("upvote_bonus") double upvoteBonus,
+    @SerializedName("player_bonus") double playerBonus,
+    @SerializedName("download_bonus") double downloadBonus
 ) {}

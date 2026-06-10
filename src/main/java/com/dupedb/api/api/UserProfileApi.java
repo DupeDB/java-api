@@ -38,8 +38,8 @@ public class UserProfileApi {
      * Looks up a user by Discord ID. Calls
      * {@code GET /api/users/discord/:discordId/profile}.
      *
-     * <p>Returns the wider {@link DiscordUserProfile} shape with the full v5
-     * points-system breakdown including consolation tiers and gated counts.
+     * <p>Returns the wider {@link DiscordUserProfile} shape with the full v9
+     * points-system breakdown (base + signal-bonus points) and gated counts.
      *
      * @param discordId the Discord snowflake (15-20 digit numeric string)
      * @throws com.dupedb.api.exception.ApiException 400 if the Discord ID
