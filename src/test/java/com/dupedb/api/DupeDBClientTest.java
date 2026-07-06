@@ -3,6 +3,7 @@ package com.dupedb.api;
 import com.dupedb.api.api.*;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -83,6 +84,31 @@ class DupeDBClientTest {
             .tokenStore(Path.of(System.getProperty("java.io.tmpdir"), "test-dupedb-token.json"))
             .build();
         assertNotNull(client);
+    }
+
+    @Test
+    void authenticatedClient_wiresAuthManagerIntoExecutor() throws Exception {
+        // The client must build its HttpExecutor with the AuthManager so the
+        // executor's 401 refresh-and-retry path is reachable (that path's mechanics
+        // are covered by HttpExecutorRetryTest). Verify the wiring directly rather
+        // than re-driving a live 401, keeping this file free of real HTTP calls.
+        DupeDBClient authed = DupeDB.client()
+            .baseUrl("https://test.dupedb.net").token("dupe_abc123").build();
+        assertNotNull(authManagerRef(authed));
+
+        DupeDBClient anonymous = DupeDB.client()
+            .baseUrl("https://test.dupedb.net").build();
+        assertNull(authManagerRef(anonymous));
+    }
+
+    /** Reads the executor's AuthManager reference to confirm builder wiring. */
+    private static Object authManagerRef(DupeDBClient client) throws Exception {
+        Field httpField = DupeDBClient.class.getDeclaredField("http");
+        httpField.setAccessible(true);
+        Object executor = httpField.get(client);
+        Field ref = executor.getClass().getDeclaredField("authManagerRef");
+        ref.setAccessible(true);
+        return ref.get(executor);
     }
 
     @Test

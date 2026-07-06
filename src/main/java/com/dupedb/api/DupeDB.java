@@ -8,6 +8,13 @@ import java.nio.file.Path;
 
 /** Static entry point for constructing a {@link DupeDBClient}. Default base URL: {@code https://dupedb.net}. */
 public final class DupeDB {
+    /**
+     * SDK release version, sent as {@code User-Agent: dupedb-java/<VERSION>} on
+     * every request. Must be bumped together with {@code version} in
+     * {@code build.gradle.kts}.
+     */
+    public static final String VERSION = "1.0.4";
+
     private static final String DEFAULT_BASE_URL = "https://dupedb.net";
 
     private DupeDB() {} // No instantiation

@@ -77,7 +77,35 @@ public class CommentApi {
      * @param content   new comment body, max 10,000 characters
      */
     public Comment edit(int commentId, String content) throws DupeDBException {
-        Map<String, Object> body = Map.of("content", content);
+        return edit(commentId, content, null);
+    }
+
+    /**
+     * Edits one of the authenticated user's own comments, optionally moving a
+     * sighting to a different server IP. Calls {@code PUT /api/auth/my-comments/:id}.
+     *
+     * <p>{@code serverIp} is only valid on sighting comments — the server rejects
+     * it on normal comments with a 400. {@code content} may be null <b>for sighting
+     * comments only</b> (leaves the existing text untouched); normal comments
+     * require it. Omitted (null) fields are left unchanged. Verified sightings are
+     * locked and return 403; no-op edits return the comment unchanged.
+     *
+     * @param commentId the comment to edit (must be owned by the caller)
+     * @param content   new comment body, max 10,000 characters; null to leave unchanged (sightings only)
+     * @param serverIp  new server IP for a sighting comment; null to leave unchanged
+     * @throws IllegalArgumentException when both {@code content} and {@code serverIp} are null
+     */
+    public Comment edit(int commentId, String content, String serverIp) throws DupeDBException {
+        if (content == null && serverIp == null) {
+            throw new IllegalArgumentException("at least one of content or serverIp is required");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (content != null) {
+            body.put("content", content);
+        }
+        if (serverIp != null) {
+            body.put("server_ip", serverIp);
+        }
         EditResponse response = http.put("/api/auth/my-comments/" + commentId,
             body, EditResponse.class);
         return response != null ? response.comment() : null;

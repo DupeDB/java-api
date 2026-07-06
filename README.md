@@ -24,7 +24,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("com.github.DupeDB:java-api:1.0.3")
+    implementation("com.github.DupeDB:java-api:1.0.4")
 }
 ```
 
@@ -40,7 +40,7 @@ dependencyResolutionManagement {
 
 // build.gradle
 dependencies {
-    implementation 'com.github.DupeDB:java-api:1.0.3'
+    implementation 'com.github.DupeDB:java-api:1.0.4'
 }
 ```
 
@@ -172,6 +172,7 @@ try {
 | `exploits().search(query, page, SearchFilters)` | GET /api/exploits/search | Yes |
 | `exploits().getById(id)` | GET /api/exploits/:id | Yes |
 | `exploits().getMeta(id)` | GET /api/exploits/:id/meta | No |
+| `exploits().pluginsMeta(id)` | GET /api/exploits/:id/plugins-meta | Yes |
 | `exploits().update(id, data)` | PUT /api/exploits/:id | Yes |
 | `exploits().report(id, type, message)` | POST /api/exploits/:id/report | Yes |
 
@@ -191,6 +192,7 @@ try {
 | `comments().add(exploitId, content)` | POST /api/exploits/:id/comments | Yes |
 | `comments().add(exploitId, content, parentId, isSighting, serverIp)` | POST /api/exploits/:id/comments | Yes |
 | `comments().edit(commentId, content)` | PUT /api/auth/my-comments/:id | Yes |
+| `comments().edit(commentId, content, serverIp)` | PUT /api/auth/my-comments/:id | Yes |
 | `comments().deleteOwn(commentId)` | DELETE /api/auth/my-comments/:id | Yes |
 
 ### Sightings
@@ -217,6 +219,16 @@ client.exploits().search("", 1, new SearchFilters()
 client.sightings().search("", 1, new SightingFilters()
     .status("working").playerMin(20)
     .sort("verified_player_count").order("desc"));
+```
+
+Exploit search queries are fuzzy and support GitHub-style `key:value` qualifiers
+(`plugin:`, `ip:`/`server:`, `author:`, `name:`, `tag:`, `version:`; quote values
+with spaces). Alternatively, `scope` restricts the whole query to one field:
+
+```java
+// These are equivalent -- fuzzy-match "luckperm" against plugin names only
+client.exploits().search("plugin:luckperm", 1);
+client.exploits().search("luckperm", 1, new SearchFilters().scope("plugin"));
 ```
 
 ### Drafts
@@ -334,6 +346,12 @@ client.drafts().submit(draft.id());
 | `metadata().publicExploits()` | GET /api/public/exploits | No |
 
 > `metadata().serverTypes()` is `@Deprecated` — the server returns an empty array. Read `Exploit.serverSoftware()` (per-exploit) instead.
+
+Polling-feed notes: `newUnverifiedSightings` only returns sightings that are still
+pending (not verified, not staff-rejected) and whose parent exploit is publicly
+visible (not a draft or rejected). `newAuditLogs` contains **staff actions only** —
+token/OAuth self-service events and users' own comment edits/deletes are filtered
+out server-side.
 
 ## Rate Limits
 

@@ -26,6 +26,9 @@ import java.util.function.Supplier;
 
 /** Internal HTTP client wrapper. Handles auth headers, JSON (de)serialization, and error mapping. */
 public class HttpExecutor implements AutoCloseable {
+    /** Sent on every request so SDK traffic is identifiable server-side. */
+    static final String USER_AGENT = "dupedb-java/" + com.dupedb.api.DupeDB.VERSION;
+
     private final String baseUrl;
     private final Supplier<String> tokenSupplier;
     private final HttpClient httpClient;
@@ -264,6 +267,7 @@ public class HttpExecutor implements AutoCloseable {
     Map<String, String> buildHeaders(String contentType) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Accept", "application/json");
+        headers.put("User-Agent", USER_AGENT);
 
         if (tokenSupplier != null) {
             String token = tokenSupplier.get();
@@ -412,15 +416,11 @@ public class HttpExecutor implements AutoCloseable {
     private HttpRequest.Builder buildRequest(String path) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + path))
-            .header("Accept", "application/json")
             .timeout(Duration.ofSeconds(30));
 
-        if (tokenSupplier != null) {
-            String token = tokenSupplier.get();
-            if (token != null) {
-                builder.header("Authorization", "Bearer " + token);
-            }
-        }
+        // Single source of truth for common headers (also the test seam), so the
+        // two can't drift apart.
+        buildHeaders(null).forEach(builder::header);
 
         return builder;
     }

@@ -4,7 +4,8 @@ plugins {
 }
 
 group = "com.dupedb"
-version = "1.0.3"
+// Keep in sync with DupeDB.VERSION (used for the User-Agent header).
+version = "1.0.4"
 
 java {
     toolchain {

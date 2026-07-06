@@ -372,7 +372,8 @@ class ModelDeserializationTest {
                 "sighting_id": 9,
                 "sighting_server_ip": "play.example.net",
                 "sighting_verified": 1,
-                "sighting_patched": 0
+                "sighting_patched": 0,
+                "sighting_rejected": 0
             }
             """;
 
@@ -382,6 +383,7 @@ class ModelDeserializationTest {
         assertEquals("play.example.net", comment.sightingServerIp());
         assertEquals(1, comment.sightingVerified());
         assertEquals(0, comment.sightingPatched());
+        assertEquals(0, comment.sightingRejected());
     }
 
     @Test
@@ -433,6 +435,62 @@ class ModelDeserializationTest {
         assertEquals(2, reply.id());
         assertEquals(1, reply.parentCommentId());
         assertEquals("reply", reply.content());
+    }
+
+    // ---- Sighting ----
+
+    @Test
+    void sightingDeserializesFromSnakeCaseJson() {
+        String json = """
+            {
+                "id": 15,
+                "server_ip": "play.example.net",
+                "is_verified": 1,
+                "verified_at": "2026-06-20T10:00:00Z",
+                "is_patched": 0,
+                "patched_at": null,
+                "created_at": "2026-06-19T08:00:00Z",
+                "is_rejected": 0,
+                "rejection_reason": null,
+                "comment_id": 88,
+                "content": "saw it here",
+                "exploit_id": "exp-1",
+                "exploit_name": "Chunk dupe",
+                "reply_count": 3
+            }
+            """;
+
+        Sighting sighting = JsonHelper.fromJson(json, Sighting.class);
+        assertEquals(15, sighting.id());
+        assertEquals("play.example.net", sighting.serverIp());
+        assertEquals(1, sighting.isVerified());
+        assertEquals(0, sighting.isPatched());
+        assertEquals(0, sighting.isRejected());
+        assertNull(sighting.rejectionReason());
+        assertEquals(88, sighting.commentId());
+        assertEquals("Chunk dupe", sighting.exploitName());
+        assertEquals(3, sighting.replyCount());
+    }
+
+    @Test
+    void sightingDeserializesRejectionFields() {
+        String json = """
+            {
+                "id": 16,
+                "server_ip": "grief.example.net",
+                "is_verified": 0,
+                "is_patched": 0,
+                "is_rejected": 1,
+                "rejection_reason": "Could not reproduce on this server",
+                "comment_id": 89,
+                "exploit_id": "exp-2"
+            }
+            """;
+
+        Sighting sighting = JsonHelper.fromJson(json, Sighting.class);
+        assertEquals(1, sighting.isRejected());
+        assertEquals("Could not reproduce on this server", sighting.rejectionReason());
+        assertEquals(0, sighting.isVerified());
     }
 
     // ---- Vote ----
@@ -1076,6 +1134,30 @@ class ModelDeserializationTest {
         Plugin p = JsonHelper.fromJson(json, Plugin.class);
         assertEquals("EssentialsX", p.name());
         assertEquals(List.of("2.20.1", "2.19.0"), p.versions());
+    }
+
+    // ---- PluginMeta ----
+
+    @Test
+    void pluginMetaDeserializesCamelCaseFields() {
+        // Server emits camelCase here, unlike most endpoints — @SerializedName must win
+        // over the global snake_case naming policy.
+        String json = """
+            {"iconUrl": "https://cdn.modrinth.com/data/abc/icon.png", "downloads": 1523847}
+            """;
+        PluginMeta meta = JsonHelper.fromJson(json, PluginMeta.class);
+        assertEquals("https://cdn.modrinth.com/data/abc/icon.png", meta.iconUrl());
+        assertEquals(1523847L, meta.downloads());
+    }
+
+    @Test
+    void pluginMetaDeserializesNullsForUnrecognizedProvider() {
+        String json = """
+            {"iconUrl": null, "downloads": null}
+            """;
+        PluginMeta meta = JsonHelper.fromJson(json, PluginMeta.class);
+        assertNull(meta.iconUrl());
+        assertNull(meta.downloads());
     }
 
     // ---- PublicStats ----

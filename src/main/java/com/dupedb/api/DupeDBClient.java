@@ -55,7 +55,7 @@ public class DupeDBClient implements AutoCloseable {
             }
             : null;
 
-        this.http = new HttpExecutor(baseUrl, tokenSupplier);
+        this.http = new HttpExecutor(baseUrl, tokenSupplier, authManager);
         this.exploitApi = new ExploitApi(http);
         this.voteApi = new VoteApi(http);
         this.commentApi = new CommentApi(http);

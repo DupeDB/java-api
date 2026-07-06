@@ -75,6 +75,38 @@ class HttpExecutorTest {
         assertEquals("Bearer tok", headers.get("Authorization"));
     }
 
+    // --- User-Agent ---
+
+    @Test
+    void buildHeaders_includesUserAgentWithSdkVersion() {
+        Map<String, String> headers = executor.buildHeaders(null);
+        assertEquals("dupedb-java/" + com.dupedb.api.DupeDB.VERSION, headers.get("User-Agent"));
+    }
+
+    @Test
+    void requests_sendUserAgentHeaderOnTheWire() throws Exception {
+        var server = com.sun.net.httpserver.HttpServer.create(
+            new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        AtomicReference<String> receivedUserAgent = new AtomicReference<>();
+        server.createContext("/api/ping", exchange -> {
+            receivedUserAgent.set(exchange.getRequestHeaders().getFirst("User-Agent"));
+            byte[] body = "{\"name\":\"ok\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            try (var os = exchange.getResponseBody()) {
+                os.write(body);
+            }
+        });
+        server.start();
+        try (HttpExecutor exec = new HttpExecutor(
+                "http://127.0.0.1:" + server.getAddress().getPort(), null)) {
+            TestPayload result = exec.get("/api/ping", TestPayload.class);
+            assertEquals("ok", result.name());
+        } finally {
+            server.stop(0);
+        }
+        assertEquals("dupedb-java/" + com.dupedb.api.DupeDB.VERSION, receivedUserAgent.get());
+    }
+
     // --- Response mapping tests (status code -> exception) ---
 
     @Test

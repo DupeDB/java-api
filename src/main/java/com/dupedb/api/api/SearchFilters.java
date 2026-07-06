@@ -29,8 +29,13 @@ public final class SearchFilters {
     private Boolean sightingEligibleOnly;
     private String excludeId;
     private Boolean autocomplete;
+    private String scope;
 
-    /** Filter by exploit type (comma-separated for multi-select). */
+    /**
+     * Filter by exploit type: {@code dupe}, {@code crash}, {@code forceop},
+     * {@code bypass}, {@code movement}, {@code other} (comma-separated for
+     * multi-select). The live list is served by {@code metadata().types()}.
+     */
     public SearchFilters type(String type) { this.type = type; return this; }
 
     /** Filter by status: {@code verified}, {@code unverified}, {@code working}, {@code patched} (comma-separated). */
@@ -57,7 +62,12 @@ public final class SearchFilters {
     /** Filter by tag name. */
     public SearchFilters tag(String tag) { this.tag = tag; return this; }
 
-    /** Sort field: {@code date_submitted}, {@code date_discovered}, {@code name}, {@code upvotes}, {@code views}, {@code type}, {@code closest_match}. */
+    /**
+     * Sort field: {@code date_submitted}, {@code date_discovered}, {@code name},
+     * {@code upvotes}, {@code views}, {@code type}, {@code closest_match}
+     * ({@code relevance} is a legacy alias). Ignored when the search query is
+     * non-empty — results are then always ranked by relevance.
+     */
     public SearchFilters sort(String sort) { this.sort = sort; return this; }
 
     /** Sort order: {@code asc} or {@code desc}. */
@@ -74,6 +84,14 @@ public final class SearchFilters {
 
     /** Compact title-only matching for typeahead UIs. Disables pagination. */
     public SearchFilters autocomplete(boolean value) { this.autocomplete = value; return this; }
+
+    /**
+     * Restricts the fuzzy search query to a single field: {@code plugin},
+     * {@code serverip} (aliases {@code server}, {@code ip}), {@code author},
+     * {@code name}, {@code tag}. Equivalent to prefixing the query with a
+     * {@code key:value} qualifier. Unknown values are ignored by the server.
+     */
+    public SearchFilters scope(String scope) { this.scope = scope; return this; }
 
     /** Materializes the builder into a {@code Map} of query-param name → value strings. */
     public Map<String, String> toMap() {
@@ -93,6 +111,7 @@ public final class SearchFilters {
         if (sightingEligibleOnly != null) map.put("sightingEligibleOnly", sightingEligibleOnly ? "true" : "false");
         if (excludeId != null) map.put("excludeId", excludeId);
         if (autocomplete != null) map.put("autocomplete", autocomplete ? "true" : "false");
+        if (scope != null) map.put("scope", scope);
         return map;
     }
 }

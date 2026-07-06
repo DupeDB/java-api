@@ -34,6 +34,8 @@ public record Comment(
     @SerializedName("sighting_server_ip") String sightingServerIp,
     @SerializedName("sighting_verified") Integer sightingVerified,
     @SerializedName("sighting_patched") Integer sightingPatched,
+    /** {@code 0}/{@code 1}; staff-rejected sightings are filtered out of public comment lists, so non-staff callers normally see {@code 0}. */
+    @SerializedName("sighting_rejected") Integer sightingRejected,
     /** Name of the parent exploit. Populated by {@code GET /api/auth/my-comments}; null elsewhere. */
     String exploitName
 ) {}

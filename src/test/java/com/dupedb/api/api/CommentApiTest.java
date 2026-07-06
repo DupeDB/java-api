@@ -109,6 +109,50 @@ class CommentApiTest {
         assertEquals(1, body.size());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void edit_withServerIp_sendsContentAndServerIp() throws DupeDBException {
+        api.edit(42, "updated text", "play.example.net");
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        assertEquals("PUT", call.method());
+        assertEquals("/api/auth/my-comments/42", call.path());
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertEquals("updated text", body.get("content"));
+        assertEquals("play.example.net", body.get("server_ip"));
+        assertEquals(2, body.size());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void edit_serverIpOnly_omitsContent() throws DupeDBException {
+        api.edit(42, null, "play.example.net");
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertFalse(body.containsKey("content"));
+        assertEquals("play.example.net", body.get("server_ip"));
+        assertEquals(1, body.size());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void edit_contentOnly_omitsServerIp() throws DupeDBException {
+        api.edit(42, "updated text", null);
+
+        RecordingExecutor.Call call = recorder.getCalls().getFirst();
+        Map<String, Object> body = (Map<String, Object>) call.body();
+        assertEquals("updated text", body.get("content"));
+        assertFalse(body.containsKey("server_ip"));
+        assertEquals(1, body.size());
+    }
+
+    @Test
+    void edit_bothNull_throws() {
+        assertThrows(IllegalArgumentException.class, () -> api.edit(42, null, null));
+        assertTrue(recorder.getCalls().isEmpty());
+    }
+
     // --- deleteOwn ---
 
     @Test

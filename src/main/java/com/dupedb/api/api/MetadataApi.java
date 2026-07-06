@@ -206,6 +206,10 @@ public class MetadataApi {
      * Lists newly created (still pending) sightings since the given timestamp
      * (max 100 per call). Calls {@code GET /api/new-unverified-sightings?since=<ISO>}.
      * Requires authentication.
+     *
+     * <p>Pending means neither verified nor staff-rejected. Sightings whose
+     * parent exploit is a draft or was rejected are also excluded, so entries
+     * from this feed always reference a publicly visible exploit.
      */
     public NewSightingsResult newUnverifiedSightings(String sinceIso) throws DupeDBException {
         String encoded = URLEncoder.encode(sinceIso, StandardCharsets.UTF_8);
@@ -260,6 +264,10 @@ public class MetadataApi {
      *
      * <p>Higher per-call cap than the other polling endpoints because audit
      * volume can spike during moderation pushes.
+     *
+     * <p>The stream contains <b>staff actions only</b>: token/OAuth self-service
+     * events and users editing or deleting their own comments are filtered out
+     * server-side.
      */
     public NewAuditLogsResult newAuditLogs(String sinceIso) throws DupeDBException {
         String encoded = URLEncoder.encode(sinceIso, StandardCharsets.UTF_8);
